@@ -1,0 +1,555 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Washtenaw Welcome Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: left rail of views (stacks to a top tab bar on phones), main pane with summary first, detail second. */
+:root {
+  --bg: #f3f6f6;
+  --surface: #ffffff;
+  --surface-2: #e8eeee;
+  --fg: #16292c;
+  --muted: #56696c;
+  --line: #d3dddd;
+  --accent: #0f6b74;        /* Huron River teal */
+  --accent-soft: #d6eced;
+  --warm: #c98a12;          /* marigold, for "due soon" */
+  --warm-soft: #fbefd4;
+  --bad: #b3372b;
+  --bad-soft: #f8dfdb;
+  --good: #2e7d4f;
+  --good-soft: #dcefe2;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1819; --surface: #152325; --surface-2: #1c2e30; --fg: #e3eeee; --muted: #93a9ab;
+    --line: #284043; --accent: #5cc3cc; --accent-soft: #173a3d; --warm: #e6b04a; --warm-soft: #3a2e14;
+    --bad: #f08273; --bad-soft: #3d1d19; --good: #6cc78f; --good-soft: #16321f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1819; --surface: #152325; --surface-2: #1c2e30; --fg: #e3eeee; --muted: #93a9ab;
+  --line: #284043; --accent: #5cc3cc; --accent-soft: #173a3d; --warm: #e6b04a; --warm-soft: #3a2e14;
+  --bad: #f08273; --bad-soft: #3d1d19; --good: #6cc78f; --good-soft: #16321f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 1.35rem; font-weight: 700; }
+h2 { font-size: 1.4rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .85em; }
+.muted { color: var(--muted); }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.rail { background: var(--surface); border-right: 1px solid var(--line); padding: 20px 14px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; flex-direction: column; gap: 4px; padding-inline: 6px; }
+.brand small { color: var(--muted); font-size: .8rem; }
+.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav button { all: unset; cursor: pointer; padding: 9px 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--muted); }
+.nav button:hover { background: var(--surface-2); color: var(--fg); }
+.nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.nav button:focus-visible { outline: 2px solid var(--accent); }
+.nav .count { font-family: var(--font-mono); font-size: .78rem; }
+.demo-note { margin-top: auto; font-size: .78rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.demo-note button { all: unset; cursor: pointer; color: var(--accent); font-weight: 700; }
+
+main { padding-block: 28px 60px; padding-inline: clamp(16px, 4vw, 44px); min-width: 0; display: flex; flex-direction: column; gap: 24px; max-width: 1180px; }
+.head { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+.head p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+
+.banner { background: var(--warm-soft); border: 1px solid color-mix(in srgb, var(--warm) 40%, transparent); border-radius: var(--r); padding: 10px 14px; font-size: .88rem; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 1.9rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat.bad b { color: var(--bad); } .stat.warn b { color: var(--warm); }
+
+.two { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+.list { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .who { font-weight: 700; }
+.row .what { font-size: .88rem; color: var(--muted); }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warm-soft); color: var(--warm); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.neutral { background: var(--surface-2); color: var(--muted); }
+.pill.accent { background: var(--accent-soft); color: var(--accent); }
+
+.day { font-family: var(--font-mono); font-size: .78rem; text-align: center; min-width: 52px; border-right: 1px solid var(--line); padding-right: 10px; color: var(--muted); }
+.day b { display: block; font-family: var(--font-display); font-size: 1.15rem; color: var(--fg); }
+
+/* Cases */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar input, .toolbar select, .field input, .field select, .field textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; }
+.toolbar input { flex: 1 1 220px; min-width: 0; }
+.btn { cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 700; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:hover { filter: brightness(1.08); }
+
+.cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.case { all: unset; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.case:hover { border-color: var(--accent); }
+.case:focus-visible { outline: 2px solid var(--accent); }
+.case-top { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .84rem; color: var(--muted); }
+.track { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.track i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.track-label { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
+
+/* Case detail */
+.detail { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.back { all: unset; cursor: pointer; color: var(--accent); font-weight: 700; }
+.timeline { display: flex; flex-direction: column; }
+.svc { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.svc:first-child { border-top: 0; }
+.svc input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+.svc label { cursor: pointer; display: flex; flex-direction: column; }
+.svc label span { font-size: .82rem; color: var(--muted); }
+.svc.done label > b { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+.members { display: flex; flex-direction: column; gap: 6px; }
+.member { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; padding: 6px 0; border-top: 1px solid var(--line); }
+.member:first-child { border-top: 0; }
+.notes { display: flex; flex-direction: column; gap: 10px; }
+.note { font-size: .9rem; border-left: 3px solid var(--line); padding-left: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field textarea { min-height: 70px; resize: vertical; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .9rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 700; }
+
+/* Resources */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { all: unset; cursor: pointer; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: .84rem; font-weight: 700; color: var(--muted); background: var(--surface); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.chip:focus-visible { outline: 2px solid var(--accent); }
+.resources { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.res { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.res p { margin: 0; font-size: .9rem; }
+.res .foot { margin-top: auto; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .84rem; }
+
+/* Phrases */
+.phrases { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .9rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+td[dir="rtl"] { text-align: right; }
+
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--fg); padding: 22px; width: min(520px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgb(10 20 22 / .45); }
+dialog form { display: flex; flex-direction: column; gap: 12px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.actions { display: flex; justify-content: end; gap: 8px; }
+
+.empty { color: var(--muted); padding: 20px 0; text-align: center; }
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two, .detail { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { min-width: 0; }
+  .rail { position: sticky; top: env(safe-area-inset-top, 0px); height: auto; z-index: 5; flex-direction: column; gap: 10px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .nav { flex-direction: row; overflow-x: auto; }
+  .nav button { white-space: nowrap; gap: 8px; }
+  .demo-note { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .track i { transition: width .35s ease; }
+}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Washtenaw Welcome Desk</h1>
+      <small>Resettlement caseworker toolkit · Ann Arbor, MI</small>
+    </div>
+    <nav class="nav" aria-label="Views">
+      <button data-view="today">Today <span class="count" id="nav-today"></span></button>
+      <button data-view="cases">Cases <span class="count" id="nav-cases"></span></button>
+      <button data-view="resources">Resources <span class="count" id="nav-res"></span></button>
+      <button data-view="phrases">Phrases</button>
+    </nav>
+    <div class="demo-note">
+      <span><b>Demo data.</b> Every family and appointment here is fictional. Changes save only in this browser.</span>
+      <button id="reset" type="button">Reset demo data</button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<dialog id="new-case">
+  <form id="case-form" method="dialog">
+    <h2>New arrival</h2>
+    <div class="form-grid">
+      <div class="field"><label class="label" for="f-name">Family name</label><input id="f-name" required placeholder="e.g. Haidari"></div>
+      <div class="field"><label class="label" for="f-size">Household size</label><input id="f-size" type="number" min="1" max="15" value="4" required></div>
+      <div class="field"><label class="label" for="f-origin">Country of origin</label><input id="f-origin" required placeholder="e.g. Afghanistan"></div>
+      <div class="field"><label class="label" for="f-lang">Primary language</label><input id="f-lang" required placeholder="e.g. Dari"></div>
+      <div class="field"><label class="label" for="f-arrival">Arrival date</label><input id="f-arrival" type="date" required></div>
+      <div class="field"><label class="label" for="f-status">Status</label>
+        <select id="f-status"><option>Refugee</option><option>SIV</option><option>Parolee</option><option>Asylee</option></select></div>
+    </div>
+    <div class="field"><label class="label" for="f-address">Housing</label><input id="f-address" placeholder="Neighborhood or complex"></div>
+    <div class="actions">
+      <button class="btn ghost" type="button" id="cancel-case">Cancel</button>
+      <button class="btn" type="submit">Add case</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  // ---------- Reference data ----------
+  // Core services modeled on the Reception & Placement (R&P) 30-day window.
+  const SERVICES = [
+    { id: "pickup",   name: "Airport pickup and welcome meal",         due: 0,  note: "Culturally appropriate food on arrival" },
+    { id: "housing",  name: "Safe, furnished housing ready",           due: 0,  note: "Lease, utilities, basic household items" },
+    { id: "safety",   name: "Home safety orientation",                 due: 5,  note: "Stove, smoke detectors, 911, locks" },
+    { id: "ssn",      name: "Social Security card application",        due: 7,  note: "SSA office visit with I-94" },
+    { id: "mdhhs",    name: "MDHHS benefits application",              due: 7,  note: "Cash, food (SNAP) and medical assistance" },
+    { id: "esl",      name: "English class enrollment",                due: 10, note: "Adults 16+; childcare plan if needed" },
+    { id: "jobs",     name: "Employment services referral",            due: 10, note: "Work-eligible adults" },
+    { id: "health",   name: "Refugee health assessment",               due: 30, note: "Domestic screening, immunizations" },
+    { id: "school",   name: "School enrollment for children",          due: 30, note: "Ages 5–18; bring immunization records" },
+    { id: "co",       name: "Cultural orientation sessions",           due: 30, note: "Banking, transit, rights and responsibilities" },
+    { id: "selserv",  name: "Selective Service registration",          due: 30, note: "Men 18–25 only", optional: true },
+    { id: "plan",     name: "Signed case plan",                        due: 30, note: "Goals reviewed with family in their language" },
+  ];
+
+  const RESOURCES = [
+    { name: "Jewish Family Services of Washtenaw County", cat: "Resettlement", desc: "Washtenaw County's refugee resettlement agency. Case management, employment, immigration legal services and mental health care.", langs: ["Arabic", "Dari", "Pashto", "Spanish", "Ukrainian"], url: "https://www.jfsannarbor.org" },
+    { name: "Michigan Immigrant Rights Center", cat: "Legal", desc: "Free and low-cost immigration legal help, including adjustment of status and family reunification questions.", langs: ["Spanish", "Arabic"], url: "https://michiganimmigrant.org" },
+    { name: "Washtenaw County Health Department", cat: "Health", desc: "Immunizations, WIC, communicable disease follow-up and help finding a primary care home.", langs: ["Spanish", "Arabic"], url: "https://www.washtenaw.org/health" },
+    { name: "Packard Health", cat: "Health", desc: "Community health centers in Ann Arbor and Ypsilanti that accept Medicaid and offer a sliding fee.", langs: ["Spanish", "Arabic"], url: "https://www.packardhealth.org" },
+    { name: "Corner Health Center", cat: "Health", desc: "Health care for young people ages 12–25 and their children in Ypsilanti.", langs: ["Spanish"], url: "https://www.cornerhealth.org" },
+    { name: "Michigan Dept. of Health & Human Services", cat: "Benefits", desc: "SNAP, cash assistance, Refugee Medical Assistance and Medicaid. Apply online through MI Bridges.", langs: ["Arabic", "Spanish", "and others by phone"], url: "https://www.michigan.gov/mdhhs" },
+    { name: "Food Gatherers", cat: "Food", desc: "Washtenaw County's food bank. Their food assistance map lists pantries and free meal sites by day.", langs: ["Spanish"], url: "https://www.foodgatherers.org" },
+    { name: "Washtenaw Literacy", cat: "English", desc: "Free one-on-one and small-group English tutoring for adults with volunteer tutors.", langs: ["English instruction"], url: "https://washtenawliteracy.org" },
+    { name: "Washtenaw Community College ESL", cat: "English", desc: "English as a Second Language courses from beginning through academic levels.", langs: ["English instruction"], url: "https://www.wccnet.edu" },
+    { name: "Ann Arbor Public Schools", cat: "Education", desc: "Student enrollment and English Learner services, including newcomer support.", langs: ["Arabic", "Spanish", "and interpreters on request"], url: "https://www.a2schools.org" },
+    { name: "Ann Arbor District Library", cat: "Education", desc: "Free library cards, computers, citizenship and language materials across five branches.", langs: ["Multilingual collections"], url: "https://aadl.org" },
+    { name: "Michigan Works! Southeast", cat: "Employment", desc: "Job search help, training programs and employer connections for Washtenaw County residents.", langs: ["Spanish"], url: "https://www.mwse.org" },
+    { name: "TheRide (AAATA)", cat: "Transit", desc: "Ann Arbor and Ypsilanti buses. Reduced fares are available for low-income riders.", langs: ["Trip planning in many languages"], url: "https://www.theride.org" },
+    { name: "SafeHouse Center", cat: "Safety", desc: "24-hour help for survivors of domestic violence and sexual assault in Washtenaw County.", langs: ["Interpreters available"], url: "https://www.safehousecenter.org" },
+    { name: "Washtenaw Interfaith Coalition for Immigrant Rights", cat: "Community", desc: "Community volunteers, accompaniment and rapid response support for immigrant families.", langs: ["Spanish"], url: "https://www.wicir.org" },
+  ];
+  const CATS = ["All", ...Array.from(new Set(RESOURCES.map(r => r.cat)))];
+
+  const PHRASES = [
+    { en: "Hello, my name is ___. I am your caseworker.", ar: "مرحبًا، اسمي ___. أنا مسؤول حالتك.", prs: "سلام، نام من ___ است. من مددکار شما هستم.", es: "Hola, me llamo ___. Soy su trabajador/a de caso.", uk: "Вітаю, мене звати ___. Я ваш соціальний працівник." },
+    { en: "We have an appointment tomorrow at ___.", ar: "لدينا موعد غدًا في الساعة ___.", prs: "ما فردا ساعت ___ ملاقات داریم.", es: "Tenemos una cita mañana a las ___.", uk: "У нас завтра зустріч о ___." },
+    { en: "Please bring your I-94 and ID cards.", ar: "يرجى إحضار وثيقة I-94 وبطاقات الهوية.", prs: "لطفاً I-94 و کارت‌های شناسایی خود را بیاورید.", es: "Por favor traiga su I-94 y sus identificaciones.", uk: "Будь ласка, візьміть I-94 та посвідчення особи." },
+    { en: "An interpreter will join by phone.", ar: "سينضم مترجم عبر الهاتف.", prs: "یک ترجمان از طریق تلفن همراه ما خواهد بود.", es: "Un intérprete participará por teléfono.", uk: "Перекладач приєднається телефоном." },
+    { en: "In an emergency, call 911.", ar: "في حالة الطوارئ، اتصل بالرقم 911.", prs: "در وقت حالت اضطراری، به ۹۱۱ زنگ بزنید.", es: "En una emergencia, llame al 911.", uk: "У надзвичайній ситуації телефонуйте 911." },
+  ];
+
+  // ---------- Demo seed (dates relative to today so the demo stays current) ----------
+  const DAY = 86400000;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const iso = d => new Date(d).toISOString().slice(0, 10);
+  const ago = n => iso(today.getTime() - n * DAY);
+  const ahead = (n, t) => ({ date: iso(today.getTime() + n * DAY), time: t });
+
+  function seed() {
+    const done = (...ids) => Object.fromEntries(ids.map(i => [i, true]));
+    return {
+      cases: [
+        { id: "c1", family: "Haidari", origin: "Afghanistan", lang: "Dari", status: "SIV", arrival: ago(4), housing: "Pittsfield Village",
+          members: [["Ahmad", 38, "Head of household"], ["Fariba", 34, "Spouse"], ["Sana", 11, "Child"], ["Omid", 7, "Child"], ["Yasin", 2, "Child"]],
+          done: done("pickup", "housing"), notes: [{ d: ago(3), t: "Family settling in. Fariba asked about women-only ESL options." }] },
+        { id: "c2", family: "Mukamana", origin: "Democratic Republic of the Congo", lang: "Kinyarwanda", status: "Refugee", arrival: ago(12), housing: "West Willow, Ypsilanti",
+          members: [["Claudine", 41, "Head of household"], ["Eric", 19, "Son"], ["Grace", 15, "Daughter"], ["Divine", 9, "Daughter"]],
+          done: done("pickup", "housing", "safety", "ssn", "mdhhs"), notes: [{ d: ago(5), t: "Eric is interested in WCC automotive program. Needs Selective Service registration." }] },
+        { id: "c3", family: "Al-Khatib", origin: "Syria", lang: "Arabic", status: "Refugee", arrival: ago(23), housing: "Arbor Hills, north Ann Arbor",
+          members: [["Rami", 45, "Head of household"], ["Huda", 40, "Spouse"], ["Lina", 17, "Daughter"], ["Karim", 13, "Son"]],
+          done: done("pickup", "housing", "safety", "ssn", "mdhhs", "esl", "jobs", "co"), notes: [{ d: ago(2), t: "Rami has an interview at a bakery on Plymouth Rd. Huda's blood pressure follow-up is pending." }] },
+        { id: "c4", family: "Kovalenko", origin: "Ukraine", lang: "Ukrainian", status: "Parolee", arrival: ago(9), housing: "Packard St, near Burns Park",
+          members: [["Olena", 36, "Head of household"], ["Maksym", 8, "Son"]],
+          done: done("pickup", "housing", "safety"), notes: [{ d: ago(6), t: "Olena is a licensed pharmacist. Look into credential evaluation." }] },
+        { id: "c5", family: "Paw", origin: "Myanmar (Karen)", lang: "Karen", status: "Refugee", arrival: ago(41), housing: "Ypsilanti Township",
+          members: [["Say", 52, "Head of household"], ["Naw", 49, "Spouse"], ["Eh", 24, "Son"]],
+          done: done(...SERVICES.map(s => s.id)), notes: [{ d: ago(10), t: "All core services complete. Moving to 90-day follow-up." }] },
+        { id: "c6", family: "Yusuf", origin: "Sudan", lang: "Arabic", status: "Refugee", arrival: ago(1), housing: "Temporary: hotel near Briarwood",
+          members: [["Abdelrahman", 29, "Head of household"], ["Amna", 26, "Spouse"], ["Mohamed", 1, "Child"]],
+          done: done("pickup"), notes: [{ d: ago(1), t: "Arrived on late flight from Chicago. Permanent apartment ready next week." }] },
+      ],
+      appts: [
+        { caseId: "c1", what: "Home safety orientation", where: "Home visit", interp: "Dari, in person", ...ahead(0, "10:00") },
+        { caseId: "c4", what: "Social Security application", where: "SSA office, Ann Arbor", interp: "Ukrainian, phone", ...ahead(0, "13:30") },
+        { caseId: "c3", what: "Refugee health assessment", where: "Packard Health", interp: "Arabic, in person", ...ahead(1, "09:00") },
+        { caseId: "c2", what: "School enrollment: Grace and Divine", where: "Ypsilanti Community Schools", interp: "Kinyarwanda, phone", ...ahead(2, "11:00") },
+        { caseId: "c6", what: "MDHHS benefits application", where: "MDHHS Washtenaw office", interp: "Arabic, in person", ...ahead(3, "14:00") },
+        { caseId: "c1", what: "Social Security application", where: "SSA office, Ann Arbor", interp: "Dari, in person", ...ahead(5, "09:30") },
+      ],
+    };
+  }
+
+  // ---------- State ----------
+  const KEY = "wwd-demo-v1";
+  let state;
+  try { state = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch { state = seed(); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+
+  let view = "today", openCase = null, resCat = "All", resQ = "", caseQ = "", caseFilter = "all";
+  const valid = ["today", "cases", "resources", "phrases"];
+  if (valid.includes(location.hash.slice(1))) view = location.hash.slice(1);
+
+  // ---------- Helpers ----------
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const daysSince = d => Math.round((today - new Date(d + "T00:00:00")) / DAY);
+  const fmt = d => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const caseById = id => state.cases.find(c => c.id === id);
+
+  function applicable(c) {
+    // Selective Service applies to men 18–25; demo roles stand in for a sex field.
+    const needsSel = c.members.some(([, age, role]) => age >= 18 && age <= 25 && /Son|Husband|Brother/i.test(role));
+    const kids = c.members.some(([, age]) => age >= 5 && age <= 18);
+    return SERVICES.filter(s => (s.id !== "selserv" || needsSel) && (s.id !== "school" || kids));
+  }
+  function caseStatus(c) {
+    const day = daysSince(c.arrival);
+    const svcs = applicable(c);
+    const open = svcs.filter(s => !c.done[s.id]);
+    const overdue = open.filter(s => day > s.due);
+    const soon = open.filter(s => day <= s.due && s.due - day <= 3);
+    return { day, svcs, open, overdue, soon, pct: Math.round(100 * (svcs.length - open.length) / svcs.length) };
+  }
+  function svcPill(s, day, done) {
+    if (done) return `<span class="pill good">Done</span>`;
+    const left = s.due - day;
+    if (left < 0) return `<span class="pill bad">${-left}d overdue</span>`;
+    if (left <= 3) return `<span class="pill warn">${left === 0 ? "Due today" : `Due in ${left}d`}</span>`;
+    return `<span class="pill neutral">Day ${s.due}</span>`;
+  }
+  function casePill(st) {
+    if (st.open.length === 0) return `<span class="pill good">Core services done</span>`;
+    if (st.overdue.length) return `<span class="pill bad">${st.overdue.length} overdue</span>`;
+    if (st.soon.length) return `<span class="pill warn">${st.soon.length} due soon</span>`;
+    return `<span class="pill accent">On track</span>`;
+  }
+
+  // ---------- Views ----------
+  function renderToday() {
+    const stats = state.cases.map(c => [c, caseStatus(c)]);
+    const active = stats.filter(([, s]) => s.day <= 90).length;
+    const overdue = stats.flatMap(([c, s]) => s.overdue.map(v => ({ c, v, s })));
+    const soon = stats.flatMap(([c, s]) => s.soon.map(v => ({ c, v, s })));
+    const appts = [...state.appts].filter(a => a.date >= iso(today)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const thisWeek = appts.filter(a => (new Date(a.date + "T00:00:00") - today) / DAY < 7);
+    const attention = [...overdue.map(x => ({ ...x, kind: "bad" })), ...soon.map(x => ({ ...x, kind: "warn" }))];
+
+    return `
+      <div class="head"><div>
+        <div class="label">${today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
+        <h2>Today's caseload</h2>
+        <p>Core services are tracked against each family's 30-day reception and placement window, counted from arrival day.</p>
+      </div></div>
+      <div class="banner"><b>Demo:</b> all families, names and appointments are fictional sample data. Resource listings are real Washtenaw County organizations; confirm details before referring a client.</div>
+      <div class="stats">
+        <div class="stat"><span class="label">Active cases</span><b>${active}</b><span class="muted">within 90 days of arrival</span></div>
+        <div class="stat bad"><span class="label">Overdue services</span><b>${overdue.length}</b><span class="muted">past the target day</span></div>
+        <div class="stat warn"><span class="label">Due in 3 days</span><b>${soon.length}</b><span class="muted">across all families</span></div>
+        <div class="stat"><span class="label">Appointments</span><b>${thisWeek.length}</b><span class="muted">in the next 7 days</span></div>
+      </div>
+      <div class="two">
+        <section class="panel">
+          <div class="panel-head"><h3>Needs attention</h3><span class="muted">${attention.length} items</span></div>
+          <div class="list">${attention.length ? attention.map(({ c, v, s, kind }) => `
+            <div class="row">
+              <span class="pill ${kind}">${kind === "bad" ? `${s.day - v.due}d late` : (v.due - s.day === 0 ? "Today" : `${v.due - s.day}d left`)}</span>
+              <div><div class="who">${esc(v.name)}</div><div class="what">${esc(c.family)} family · day ${s.day} · ${esc(c.lang)}</div></div>
+              <button class="btn ghost" data-open="${c.id}">Open</button>
+            </div>`).join("") : `<div class="empty">Nothing overdue or due soon.</div>`}
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3>Upcoming appointments</h3><span class="muted">next 7 days</span></div>
+          <div class="list">${thisWeek.length ? thisWeek.map(a => { const c = caseById(a.caseId); const d = new Date(a.date + "T00:00:00"); return `
+            <div class="row">
+              <div class="day">${d.toLocaleDateString("en-US", { weekday: "short" })}<b>${d.getDate()}</b></div>
+              <div><div class="who">${esc(a.what)}</div><div class="what"><span class="mono">${a.time}</span> · ${esc(c ? c.family : "")} · ${esc(a.where)}</div><div class="what">Interpreter: ${esc(a.interp)}</div></div>
+              <span></span>
+            </div>`; }).join("") : `<div class="empty">No appointments this week.</div>`}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function renderCases() {
+    if (openCase) return renderCase(caseById(openCase));
+    const q = caseQ.toLowerCase();
+    const rows = state.cases.map(c => [c, caseStatus(c)])
+      .filter(([c, s]) => !q || [c.family, c.origin, c.lang, c.housing, ...c.members.map(m => m[0])].join(" ").toLowerCase().includes(q))
+      .filter(([, s]) => caseFilter === "all" || (caseFilter === "attention" ? s.overdue.length || s.soon.length : caseFilter === "done" ? !s.open.length : s.open.length))
+      .sort((a, b) => b[1].overdue.length - a[1].overdue.length || a[1].day - b[1].day);
+    return `
+      <div class="head"><div><h2>Cases</h2><p>Each card shows progress through core services and the day count since arrival.</p></div>
+        <button class="btn" id="add-case">Add new arrival</button></div>
+      <div class="toolbar">
+        <input id="case-q" type="search" placeholder="Search family, language, country, neighborhood" value="${esc(caseQ)}" aria-label="Search cases">
+        <select id="case-filter" aria-label="Filter cases">
+          <option value="all"${caseFilter === "all" ? " selected" : ""}>All cases</option>
+          <option value="attention"${caseFilter === "attention" ? " selected" : ""}>Needs attention</option>
+          <option value="open"${caseFilter === "open" ? " selected" : ""}>Services still open</option>
+          <option value="done"${caseFilter === "done" ? " selected" : ""}>Core services done</option>
+        </select>
+      </div>
+      <div class="cases">${rows.length ? rows.map(([c, s]) => `
+        <button class="case" data-open="${c.id}">
+          <div class="case-top"><div><h3>${esc(c.family)} family</h3><div class="muted" style="font-size:.85rem">${esc(c.origin)}</div></div>${casePill(s)}</div>
+          <div class="meta"><span>${c.members.length} people</span><span>${esc(c.lang)}</span><span>${esc(c.status)}</span><span class="mono">Day ${s.day}</span></div>
+          <div class="track" aria-hidden="true"><i style="width:${s.pct}%"></i></div>
+          <div class="track-label"><span>${s.svcs.length - s.open.length} of ${s.svcs.length} services</span><span>Arrived ${fmt(c.arrival)}</span></div>
+        </button>`).join("") : `<div class="empty">No cases match.</div>`}
+      </div>`;
+  }
+
+  function renderCase(c) {
+    const s = caseStatus(c);
+    const appts = state.appts.filter(a => a.caseId === c.id && a.date >= iso(today)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    return `
+      <div><button class="back" id="back">← All cases</button></div>
+      <div class="head"><div>
+        <div class="label">${esc(c.status)} · ${esc(c.origin)}</div>
+        <h2>${esc(c.family)} family</h2>
+        <p>Day <span class="mono">${s.day}</span> since arrival on ${fmt(c.arrival)}. ${s.open.length ? `${s.open.length} core services still open.` : "All core services complete."}</p>
+      </div>${casePill(s)}</div>
+      <div class="detail">
+        <section class="panel">
+          <div class="panel-head"><h3>Core services</h3><span class="muted">${s.pct}% complete</span></div>
+          <div class="track" aria-hidden="true"><i style="width:${s.pct}%"></i></div>
+          <div class="timeline">${s.svcs.map(v => `
+            <div class="svc${c.done[v.id] ? " done" : ""}">
+              <input type="checkbox" id="svc-${c.id}-${v.id}" data-svc="${v.id}" ${c.done[v.id] ? "checked" : ""}>
+              <label for="svc-${c.id}-${v.id}"><b>${esc(v.name)}</b><span>${esc(v.note)} · target day ${v.due}</span></label>
+              ${svcPill(v, s.day, c.done[v.id])}
+            </div>`).join("")}
+          </div>
+        </section>
+        <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+          <section class="panel">
+            <h3>Household</h3>
+            <dl class="kv"><dt>Language</dt><dd>${esc(c.lang)}</dd><dt>Housing</dt><dd>${esc(c.housing || "Not set")}</dd></dl>
+            <div class="members">${c.members.map(([n, a, r]) => `<div class="member"><span><b>${esc(n)}</b> · ${esc(r)}</span><span class="mono muted">age ${a}</span></div>`).join("")}</div>
+          </section>
+          <section class="panel">
+            <h3>Upcoming</h3>
+            <div class="list">${appts.length ? appts.map(a => `<div class="row" style="grid-template-columns:auto 1fr"><span class="mono muted">${fmt(a.date)} ${a.time}</span><div><div class="who">${esc(a.what)}</div><div class="what">${esc(a.where)} · ${esc(a.interp)}</div></div></div>`).join("") : `<div class="muted">No appointments scheduled.</div>`}</div>
+          </section>
+          <section class="panel">
+            <h3>Case notes</h3>
+            <form id="note-form" class="field">
+              <label class="label" for="note-text">Add a note</label>
+              <textarea id="note-text" placeholder="What happened, what's next"></textarea>
+              <div class="actions"><button class="btn" type="submit">Save note</button></div>
+            </form>
+            <div class="notes">${[...c.notes].reverse().map(n => `<div class="note"><span class="mono muted">${fmt(n.d)}</span><br>${esc(n.t)}</div>`).join("")}</div>
+          </section>
+        </div>
+      </div>`;
+  }
+
+  function renderResources() {
+    const q = resQ.toLowerCase();
+    const list = RESOURCES.filter(r => (resCat === "All" || r.cat === resCat) && (!q || [r.name, r.desc, r.cat, ...r.langs].join(" ").toLowerCase().includes(q)));
+    return `
+      <div class="head"><div><h2>Washtenaw County resources</h2><p>Real local organizations for referrals. Hours, eligibility and language support change, so confirm with the organization before sending a family.</p></div></div>
+      <div class="toolbar"><input id="res-q" type="search" placeholder="Search by need or language, e.g. dental, Arabic" value="${esc(resQ)}" aria-label="Search resources"></div>
+      <div class="chips" role="group" aria-label="Category">${CATS.map(c => `<button class="chip" data-cat="${esc(c)}" aria-pressed="${c === resCat}">${esc(c)}</button>`).join("")}</div>
+      <div class="resources">${list.length ? list.map(r => `
+        <article class="res">
+          <span class="label">${esc(r.cat)}</span>
+          <h3>${esc(r.name)}</h3>
+          <p>${esc(r.desc)}</p>
+          <div class="foot"><span class="muted">${esc(r.langs.join(", "))}</span><a href="${r.url}" target="_blank" rel="noopener">Website ↗</a></div>
+        </article>`).join("") : `<div class="empty">No resources match.</div>`}
+      </div>`;
+  }
+
+  function renderPhrases() {
+    return `
+      <div class="head"><div><h2>Phrase sheet</h2><p>Short phrases for scheduling and safety. Use them to bridge a moment, not to replace a qualified interpreter for anything about health, legal status, money or consent.</p></div></div>
+      <section class="panel phrases">
+        <table>
+          <thead><tr><th>English</th><th>Arabic</th><th>Dari</th><th>Spanish</th><th>Ukrainian</th></tr></thead>
+          <tbody>${PHRASES.map(p => `<tr><td><b>${esc(p.en)}</b></td><td dir="rtl" lang="ar">${esc(p.ar)}</td><td dir="rtl" lang="prs">${esc(p.prs)}</td><td lang="es">${esc(p.es)}</td><td lang="uk">${esc(p.uk)}</td></tr>`).join("")}</tbody>
+        </table>
+      </section>
+      <p class="muted" style="font-size:.85rem;margin:0">Demo translations; have a native speaker review them before use with clients.</p>`;
+  }
+
+  // ---------- Render + events ----------
+  function render() {
+    document.querySelectorAll(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.view === view ? "page" : "false"));
+    const att = state.cases.reduce((n, c) => n + caseStatus(c).overdue.length, 0);
+    $("#nav-today").textContent = att ? att : "";
+    $("#nav-cases").textContent = state.cases.length;
+    $("#nav-res").textContent = RESOURCES.length;
+    $("#main").innerHTML = { today: renderToday, cases: renderCases, resources: renderResources, phrases: renderPhrases }[view]();
+  }
+
+  document.addEventListener("click", e => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.view) { view = t.dataset.view; openCase = null; render(); window.scrollTo(0, 0); }
+    else if (t.dataset.open) { view = "cases"; openCase = t.dataset.open; render(); window.scrollTo(0, 0); }
+    else if (t.id === "back") { openCase = null; render(); }
+    else if (t.dataset.cat) { resCat = t.dataset.cat; render(); }
+    else if (t.id === "add-case") { $("#f-arrival").value = iso(today); $("#new-case").showModal(); }
+    else if (t.id === "cancel-case") { $("#new-case").close(); }
+    else if (t.id === "reset") { state = seed(); save(); openCase = null; render(); }
+  });
+  document.addEventListener("change", e => {
+    if (e.target.dataset.svc && openCase) {
+      const c = caseById(openCase);
+      if (e.target.checked) c.done[e.target.dataset.svc] = true; else delete c.done[e.target.dataset.svc];
+      save(); render();
+    } else if (e.target.id === "case-filter") { caseFilter = e.target.value; render(); }
+  });
+  document.addEventListener("input", e => {
+    const id = e.target.id;
+    if (id === "case-q" || id === "res-q") {
+      if (id === "case-q") caseQ = e.target.value; else resQ = e.target.value;
+      const pos = e.target.selectionStart; render();
+      const el = $("#" + id); el.focus(); el.setSelectionRange(pos, pos);
+    }
+  });
+  document.addEventListener("submit", e => {
+    e.preventDefault();
+    if (e.target.id === "note-form") {
+      const v = $("#note-text").value.trim(); if (!v) return;
+      caseById(openCase).notes.push({ d: iso(today), t: v }); save(); render();
+    } else if (e.target.id === "case-form") {
+      const size = Math.max(1, +$("#f-size").value || 1);
+      const c = { id: "c" + Date.now(), family: $("#f-name").value.trim(), origin: $("#f-origin").value.trim(), lang: $("#f-lang").value.trim(),
+        status: $("#f-status").value, arrival: $("#f-arrival").value, housing: $("#f-address").value.trim(),
+        members: [["Head of household", 30, "Head of household"], ...Array.from({ length: size - 1 }, (_, i) => [`Member ${i + 2}`, 10, "Child"])],
+        done: {}, notes: [{ d: iso(today), t: "Case opened." }] };
+      state.cases.push(c); save(); $("#new-case").close(); e.target.reset(); view = "cases"; openCase = c.id; render();
+    }
+  });
+
+  render();
+})();
+</script>
