@@ -1,0 +1,560 @@
+<title>Listing Call Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: summary strip on top; left = listing lookup ("is it still open?"), right = after-call summary writer. Stacks on phones. */
+:root {
+  --bg: #f1f2f6;
+  --surface: #ffffff;
+  --surface-2: #e7e9f1;
+  --fg: #1a1f33;
+  --muted: #5b6178;
+  --line: #d6d9e5;
+  --accent: #26449a;        /* case-file ink blue */
+  --accent-soft: #dfe5f6;
+  --open: #23784a;   --open-soft: #dbf0e3;
+  --pending: #a8650b; --pending-soft: #f9ebd2;
+  --closed: #a93a32; --closed-soft: #f7dedb;
+  --unknown: #5b6178; --unknown-soft: #e7e9f1;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10131d; --surface: #181c2a; --surface-2: #222738; --fg: #e6e8f2; --muted: #9aa0b8; --line: #2d3348;
+    --accent: #8ea8f2; --accent-soft: #232f55;
+    --open: #6fcf97; --open-soft: #173324; --pending: #f0b75a; --pending-soft: #3a2b12;
+    --closed: #f08b80; --closed-soft: #3d1c19; --unknown: #9aa0b8; --unknown-soft: #222738;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10131d; --surface: #181c2a; --surface-2: #222738; --fg: #e6e8f2; --muted: #9aa0b8; --line: #2d3348;
+  --accent: #8ea8f2; --accent-soft: #232f55;
+  --open: #6fcf97; --open-soft: #173324; --pending: #f0b75a; --pending-soft: #3a2b12;
+  --closed: #f08b80; --closed-soft: #3d1c19; --unknown: #9aa0b8; --unknown-soft: #222738;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; }
+h2 { font-size: 1.15rem; font-weight: 700; }
+h3 { font-size: 1rem; font-weight: 700; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .82em; }
+.muted { color: var(--muted); }
+.label { font-size: .7rem; text-transform: uppercase; letter-spacing: .09em; font-weight: 700; color: var(--muted); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 24px 64px; padding-inline: clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 20px; }
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+.top p { color: var(--muted); max-width: 60ch; margin-top: 4px; }
+.conn { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); display: inline-block; }
+.conn.live i { background: var(--open); }
+.conn.off i { background: var(--closed); }
+
+.strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.tally { all: unset; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-size: .88rem; }
+.tally b { font-family: var(--font-display); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.tally[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tally:focus-visible { outline: 2px solid var(--accent); }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+input[type="search"], input[type="text"], input[type="date"], select, textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 90px; line-height: 1.45; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.btn { cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); border-radius: 8px; padding: 9px 15px; font-weight: 700; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { padding: 5px 10px; font-size: .84rem; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.link { all: unset; cursor: pointer; color: var(--accent); font-weight: 700; font-size: .88rem; }
+.link:focus-visible { outline: 2px solid var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.open { background: var(--open-soft); color: var(--open); }
+.pill.pending { background: var(--pending-soft); color: var(--pending); }
+.pill.closed { background: var(--closed-soft); color: var(--closed); }
+.pill.unknown { background: var(--unknown-soft); color: var(--unknown); }
+.tag { font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 4px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.stale { color: var(--pending); font-weight: 700; }
+
+.listings { display: flex; flex-direction: column; }
+.listing { all: unset; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 11px 10px; border-top: 1px solid var(--line); border-radius: 6px; }
+.listing:first-child { border-top-color: transparent; }
+.listing:hover { background: var(--surface-2); }
+.listing[aria-current="true"] { background: var(--accent-soft); }
+.listing:focus-visible { outline: 2px solid var(--accent); }
+.listing .addr { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.listing .sub { font-size: .84rem; color: var(--muted); grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
+.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px; color: var(--muted); font-size: .9rem; display: flex; flex-direction: column; gap: 8px; }
+
+.verdict { border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line); background: var(--surface-2); }
+.verdict.open { background: var(--open-soft); border-color: color-mix(in srgb, var(--open) 30%, transparent); }
+.verdict.pending { background: var(--pending-soft); border-color: color-mix(in srgb, var(--pending) 30%, transparent); }
+.verdict.closed { background: var(--closed-soft); border-color: color-mix(in srgb, var(--closed) 30%, transparent); }
+.verdict .big { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: .9rem; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.history { display: flex; flex-direction: column; gap: 10px; }
+.call { border-left: 3px solid var(--line); padding-left: 12px; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
+.call.open { border-left-color: var(--open); } .call.pending { border-left-color: var(--pending); } .call.closed { border-left-color: var(--closed); }
+
+.result { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.thinking { font-size: .9rem; color: var(--muted); font-style: italic; }
+.notice { font-size: .86rem; padding: 9px 12px; border-radius: 8px; background: var(--surface-2); }
+.notice.err { background: var(--closed-soft); color: var(--closed); }
+.notice.ok { background: var(--open-soft); color: var(--open); }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+details.add summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+details.add[open] summary { margin-bottom: 12px; }
+details.add form { display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Listing Call Desk</h1>
+      <p>Look up a rental listing to see if it is still open. After you call the landlord, paste your notes and get a clean summary that updates the listing for the whole team.</p>
+    </div>
+    <div class="conn" id="conn"><i></i><span>Connecting to the listing database…</span></div>
+  </header>
+
+  <div class="strip" id="strip" role="group" aria-label="Filter by status"></div>
+
+  <div class="cols">
+    <!-- LEFT: is it still open? -->
+    <section class="panel" aria-labelledby="lookup-h">
+      <div class="panel-head">
+        <h2 id="lookup-h">Is it still open?</h2>
+        <span class="muted mono" id="count"></span>
+      </div>
+      <input type="search" id="q" placeholder="Search address, landlord, or listing ID" aria-label="Search listings">
+      <div class="listings" id="listings">
+        <div class="empty">Loading listings…</div>
+      </div>
+      <div id="detail" hidden></div>
+      <details class="add" id="add-wrap">
+        <summary>Add a listing</summary>
+        <form id="add-form">
+          <div class="field"><label class="label" for="a-addr">Address</label><input type="text" id="a-addr" required placeholder="e.g. 214 N Adams St, Unit 2, Ypsilanti"></div>
+          <div class="grid2">
+            <div class="field"><label class="label" for="a-landlord">Landlord or manager</label><input type="text" id="a-landlord" placeholder="Name or company"></div>
+            <div class="field"><label class="label" for="a-phone">Phone</label><input type="text" id="a-phone" placeholder="734-555-0100"></div>
+            <div class="field"><label class="label" for="a-rent">Rent per month</label><input type="text" id="a-rent" placeholder="$1,150"></div>
+            <div class="field"><label class="label" for="a-beds">Bedrooms</label><input type="text" id="a-beds" placeholder="2"></div>
+          </div>
+          <div class="field"><label class="label" for="a-voucher">Accepts housing vouchers</label>
+            <select id="a-voucher"><option value="unknown">Not known yet</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+          <div class="actions"><button class="btn" type="submit" id="a-save">Add listing</button><span id="a-msg" class="muted"></span></div>
+        </form>
+      </details>
+    </section>
+
+    <!-- RIGHT: after-call summary -->
+    <section class="panel" aria-labelledby="call-h">
+      <div class="panel-head">
+        <h2 id="call-h">After-call summary</h2>
+        <span class="muted" style="font-size:.84rem">Notes in, summary out</span>
+      </div>
+      <form id="call-form" class="panel" style="padding:0;border:0">
+        <div class="field">
+          <label class="label" for="c-listing">Which listing did you call about?</label>
+          <select id="c-listing" required><option value="">Choose a listing</option></select>
+        </div>
+        <div class="field">
+          <label class="label" for="c-notes">Your call notes</label>
+          <textarea id="c-notes" rows="7" required placeholder="Type it the way you'd jot it down. e.g. talked to Marcy 2:10pm. still avail, 2 other apps in. rent 1150, dep 1 mo. takes HCV, needs inspection. showing thurs 4pm. wants proof of income."></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn" type="submit" id="c-write">Write summary</button>
+          <button class="btn ghost" type="button" id="c-manual">Write it myself</button>
+          <button class="btn ghost" type="button" id="c-stop" hidden>Stop</button>
+        </div>
+        <p class="muted" id="c-hint" style="font-size:.82rem">Claude reads your notes, writes the summary, and decides whether the landlord said the unit is open, pending, or rented. You review every field before saving.</p>
+      </form>
+
+      <div class="result" id="result" hidden>
+        <div id="r-status-line"></div>
+        <div class="field"><label class="label" for="r-summary">Summary</label><textarea id="r-summary" rows="5"></textarea></div>
+        <div class="grid2">
+          <div class="field"><label class="label" for="r-status">Listing status after this call</label>
+            <select id="r-status">
+              <option value="open">Open: still available</option>
+              <option value="pending">Pending: applications under review</option>
+              <option value="closed">Closed: rented or taken down</option>
+              <option value="unknown">Not confirmed: no answer or unclear</option>
+            </select></div>
+          <div class="field"><label class="label" for="r-follow">Follow up by</label><input type="date" id="r-follow"></div>
+        </div>
+        <div class="field"><label class="label" for="r-evidence">What the landlord said about availability</label><input type="text" id="r-evidence"></div>
+        <div class="field"><label class="label" for="r-steps">Next steps (one per line)</label><textarea id="r-steps" rows="3"></textarea></div>
+        <div class="actions">
+          <button class="btn" type="button" id="r-save">Save and update listing</button>
+          <button class="btn ghost" type="button" id="r-copy">Copy summary</button>
+          <button class="link" type="button" id="r-clear">Start over</button>
+        </div>
+        <div id="r-msg"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STATUS = {
+    open: { word: "Open", long: "Still open", note: "Landlord confirmed it is available." },
+    pending: { word: "Pending", long: "Pending", note: "Applications are under review. Ask to be put on the list." },
+    closed: { word: "Closed", long: "No longer open", note: "Rented or taken down. Look elsewhere." },
+    unknown: { word: "Unconfirmed", long: "Not confirmed", note: "Nobody has confirmed availability yet." },
+  };
+  const STALE_DAYS = 7;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== null && v !== false) n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  };
+  const pill = (s) => el("span", { class: "pill " + (STATUS[s] ? s : "unknown"), text: (STATUS[s] || STATUS.unknown).word });
+  const daysSince = (iso) => iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : null;
+  const ago = (iso) => {
+    const d = daysSince(iso);
+    if (d === null) return "never";
+    if (d <= 0) return "today";
+    if (d === 1) return "yesterday";
+    return d + " days ago";
+  };
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+  const isStale = (l) => { const d = daysSince(l.confirmedAt); return d === null || d > STALE_DAYS; };
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+
+  let db = null, sample = null;
+  let listings = [], calls = [];
+  let filter = "all", selected = null, ctl = null;
+
+  // ---------- connection ----------
+  function setConn(state, text) {
+    $("conn").className = "conn " + state;
+    $("conn").querySelector("span").textContent = text;
+  }
+
+  // ---------- render: tallies ----------
+  function renderStrip() {
+    const counts = { all: listings.length, open: 0, pending: 0, closed: 0, stale: 0 };
+    for (const l of listings) {
+      if (l.status === "open" || l.status === "pending" || l.status === "closed") counts[l.status]++;
+      if (l.status !== "closed" && isStale(l)) counts.stale++;
+    }
+    const items = [
+      ["all", "All listings"], ["open", "Open"], ["pending", "Pending"], ["closed", "Closed"],
+      ["stale", `Needs a call (over ${STALE_DAYS} days)`],
+    ];
+    $("strip").replaceChildren(...items.map(([k, label]) =>
+      el("button", { class: "tally", type: "button", "aria-pressed": String(filter === k), onclick: () => { filter = filter === k && k !== "all" ? "all" : k; render(); } },
+        el("b", { text: counts[k] }), label)));
+  }
+
+  // ---------- render: listing list ----------
+  function visibleListings() {
+    const q = $("q").value.trim().toLowerCase();
+    return listings
+      .filter((l) => filter === "all" ? true : filter === "stale" ? (l.status !== "closed" && isStale(l)) : l.status === filter)
+      .filter((l) => !q || [l.address, l.landlord, l.code, l.phone].some((v) => (v || "").toLowerCase().includes(q)))
+      .sort((a, b) => (a.address || "").localeCompare(b.address || ""));
+  }
+  function renderList() {
+    const box = $("listings");
+    if (!db) return;
+    const rows = visibleListings();
+    $("count").textContent = `${rows.length} of ${listings.length}`;
+    if (!listings.length) {
+      box.replaceChildren(el("div", { class: "empty" },
+        el("b", { text: "No listings in the database yet." }),
+        "Add the first one with \"Add a listing\" below. Every listing you add here is shared with your team."));
+      return;
+    }
+    if (!rows.length) { box.replaceChildren(el("div", { class: "empty", text: "No listing matches that search." })); return; }
+    box.replaceChildren(...rows.map((l) => el("button", {
+      class: "listing", type: "button", "aria-current": String(selected === l.id), onclick: () => select(l.id),
+    },
+      el("span", { class: "addr" }, l.address || "Untitled listing", l.example ? [" ", el("span", { class: "tag", text: "Example" })] : null),
+      pill(l.status),
+      el("span", { class: "sub" },
+        l.code ? el("span", { class: "mono", text: l.code }) : null,
+        l.rent ? el("span", { text: l.rent + (l.beds ? ` · ${l.beds} BR` : "") }) : null,
+        l.status === "closed" ? el("span", { text: "Closed " + ago(l.confirmedAt) })
+          : isStale(l) ? el("span", { class: "stale", text: "Last confirmed " + ago(l.confirmedAt) })
+          : el("span", { text: "Confirmed " + ago(l.confirmedAt) })))));
+  }
+
+  // ---------- render: detail ----------
+  function renderDetail() {
+    const box = $("detail");
+    const l = listings.find((x) => x.id === selected);
+    if (!l) { box.hidden = true; box.replaceChildren(); return; }
+    box.hidden = false;
+    const s = STATUS[l.status] ? l.status : "unknown";
+    const stale = s !== "closed" && isStale(l);
+    const mine = calls.filter((c) => c.listingId === l.id).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    const verdictText = s === "unknown" ? "Not confirmed" : stale ? `${STATUS[s].long}, as of ${ago(l.confirmedAt)}` : STATUS[s].long;
+    box.replaceChildren(el("div", { class: "panel", style: "padding:0;border:0" },
+      el("div", { class: "verdict " + s },
+        el("span", { class: "label", text: l.address }),
+        el("span", { class: "big", text: verdictText }),
+        el("span", { text: stale && s !== "unknown" ? `This was last confirmed ${fmtDate(l.confirmedAt)}. Call before you send a client.` : STATUS[s].note }),
+        l.evidence ? el("span", { class: "muted", style: "font-size:.88rem" }, "Landlord said: ", el("i", { text: `"${l.evidence}"` })) : null),
+      el("dl", { class: "kv" },
+        el("dt", { text: "Landlord" }), el("dd", { text: l.landlord || "Not recorded" }),
+        el("dt", { text: "Phone" }), el("dd", { class: "mono", text: l.phone || "Not recorded" }),
+        el("dt", { text: "Rent" }), el("dd", { text: [l.rent, l.beds ? `${l.beds} BR` : ""].filter(Boolean).join(" · ") || "Not recorded" }),
+        el("dt", { text: "Vouchers" }), el("dd", { text: { yes: "Accepts housing vouchers", no: "Does not accept vouchers" }[l.voucher] || "Not known yet" }),
+        el("dt", { text: "Last call" }), el("dd", { text: l.lastCallAt ? `${fmtDate(l.lastCallAt)} (${ago(l.lastCallAt)})` : "No calls logged" }),
+        l.followUp ? [el("dt", { text: "Follow up by" }), el("dd", { text: fmtDate(l.followUp + "T12:00") })] : null),
+      el("div", { class: "actions" },
+        el("button", { class: "btn small", type: "button", onclick: () => { $("c-listing").value = l.id; $("c-notes").focus(); } }, "Log a call about this listing"),
+        l.phone ? el("button", { class: "btn small ghost", type: "button", onclick: (e) => copy(l.phone, e.currentTarget, "Phone copied") }, "Copy phone") : null),
+      el("h3", { text: `Call history (${mine.length})` }),
+      mine.length ? el("div", { class: "history" }, mine.slice(0, 8).map((c) => el("div", { class: "call " + (c.status || "unknown") },
+        el("span", { class: "actions" }, pill(c.status), el("span", { class: "muted mono", text: fmtDate(c.createdAt) })),
+        el("span", { text: c.summary }),
+        c.nextSteps && c.nextSteps.length ? el("ul", { class: "steps" }, c.nextSteps.map((t) => el("li", { text: t }))) : null)))
+        : el("p", { class: "muted", text: "No calls logged for this listing yet." })));
+  }
+
+  function renderSelect() {
+    const sel = $("c-listing");
+    const cur = sel.value;
+    const sorted = [...listings].sort((a, b) => (a.address || "").localeCompare(b.address || ""));
+    sel.replaceChildren(el("option", { value: "", text: listings.length ? "Choose a listing" : "Add a listing first" }),
+      ...sorted.map((l) => el("option", { value: l.id, text: `${l.address}${l.code ? " (" + l.code + ")" : ""}` })));
+    if (cur && listings.some((l) => l.id === cur)) sel.value = cur;
+  }
+
+  function render() { renderStrip(); renderList(); renderDetail(); renderSelect(); }
+  function select(id) { selected = selected === id ? null : id; renderList(); renderDetail(); }
+  $("q").addEventListener("input", renderList);
+
+  // ---------- copy ----------
+  async function copy(text, btn, done) {
+    const old = btn.textContent;
+    try { await navigator.clipboard.writeText(text); btn.textContent = done; }
+    catch { btn.textContent = "Select and copy the text instead"; }
+    setTimeout(() => { btn.textContent = old; }, 1800);
+  }
+
+  // ---------- add listing ----------
+  $("add-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!db) return;
+    const btn = $("a-save");
+    btn.disabled = true;
+    const code = "WL-" + String(Math.floor(1000 + Math.random() * 9000));
+    try {
+      const ref = await db.collection("listings").add({
+        address: $("a-addr").value.trim(), landlord: $("a-landlord").value.trim(), phone: $("a-phone").value.trim(),
+        rent: $("a-rent").value.trim(), beds: $("a-beds").value.trim(), voucher: $("a-voucher").value,
+        code, status: "unknown", evidence: "", confirmedAt: null, lastCallAt: null, followUp: null,
+        createdAt: new Date().toISOString(),
+      });
+      e.target.reset();
+      $("a-msg").textContent = "Added. Call the landlord to confirm it is open.";
+      selected = ref.id;
+      $("c-listing").value = ref.id;
+    } catch (err) {
+      $("a-msg").textContent = writeError(err);
+    } finally { btn.disabled = false; }
+  });
+
+  function writeError(err) {
+    if (err && err.code === "invalid_argument") return "You can view listings but your access level can't change them. Ask the owner for Contributor access.";
+    if (err && err.code === "quota_exceeded") return "The database is full. Remove old listings first.";
+    return "Couldn't save. Check your connection and try again.";
+  }
+
+  // ---------- after-call summary ----------
+  function prompt(l, notes) {
+    return `You write after-call summaries for a housing caseworker. The caseworker calls landlords to check whether a rental listing is still open for their clients.
+
+Today is ${todayISO()}.
+Listing on file:
+- Address: ${l.address}
+- Landlord: ${l.landlord || "unknown"}
+- Rent on file: ${l.rent || "unknown"}; bedrooms: ${l.beds || "unknown"}
+- Status before this call: ${l.status}
+
+Caseworker's rough notes from the call:
+"""
+${notes}
+"""
+
+Reply with only one JSON object in this shape:
+{"summary": "3-5 plain sentences in past tense saying who was reached, what they said about availability, terms (rent, deposit, move-in, voucher acceptance, requirements) and what was agreed",
+ "listing_status": "open" | "pending" | "closed" | "unknown",
+ "status_evidence": "a short phrase from the notes showing the availability, or empty string",
+ "next_steps": ["short action for the caseworker", "..."],
+ "follow_up_date": "YYYY-MM-DD or null"}
+
+Rules for listing_status: "open" = landlord said it is available or still taking applications. "pending" = an application is being reviewed, a hold was placed, or it is about to be rented. "closed" = rented, leased, withdrawn, or no longer available. "unknown" = no answer, voicemail, wrong number, or availability was not discussed.
+Use only facts in the notes. Do not invent names, numbers, or dates. Resolve relative dates like "thurs" against today's date. Keep next_steps to at most 4 items.`;
+  }
+
+  function showResult(r, l, fromClaude) {
+    $("result").hidden = false;
+    $("r-summary").value = r.summary || "";
+    $("r-status").value = STATUS[r.listing_status] ? r.listing_status : "unknown";
+    $("r-evidence").value = r.status_evidence || "";
+    $("r-steps").value = (Array.isArray(r.next_steps) ? r.next_steps : []).join("\n");
+    $("r-follow").value = /^\d{4}-\d{2}-\d{2}$/.test(r.follow_up_date || "") ? r.follow_up_date : "";
+    const s = $("r-status").value;
+    $("r-status-line").replaceChildren(el("div", { class: "actions" },
+      el("span", { class: "label", text: fromClaude ? "Claude's read on availability" : "Fill in what you learned" }),
+      fromClaude ? pill(s) : null,
+      fromClaude && l.status !== s ? el("span", { class: "muted", style: "font-size:.86rem", text: `was ${STATUS[l.status]?.word || "Unconfirmed"} before this call` }) : null));
+    $("r-msg").replaceChildren();
+  }
+
+  $("call-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const l = listings.find((x) => x.id === $("c-listing").value);
+    const notes = $("c-notes").value.trim();
+    if (!l || !notes) return;
+    if (!sample) { showResult({}, l, false); return; }
+    ctl = new AbortController();
+    $("c-write").disabled = true; $("c-stop").hidden = false;
+    $("result").hidden = true;
+    $("c-hint").className = "thinking";
+    $("c-hint").textContent = "Reading your notes and writing the summary…";
+    try {
+      const r = await sample.json(prompt(l, notes), { signal: ctl.signal, modelTier: "quick" });
+      if (!r || typeof r !== "object") throw { code: "invalid_json" };
+      showResult(r, l, true);
+      $("c-hint").className = "muted";
+      $("c-hint").textContent = "Check each field, fix anything Claude got wrong, then save.";
+    } catch (err) {
+      $("c-hint").className = "notice err";
+      $("c-hint").textContent = {
+        cancelled: "Stopped. Your notes are still here.",
+        not_granted: "Claude wasn't allowed for this page. Use \"Write it myself\" instead.",
+        rate_limited: "Too many requests right now. Wait a minute, then try again.",
+        invalid_json: "The summary came back in a form the page couldn't read. Try again, or write it yourself.",
+        prompt_too_large: "Those notes are too long. Trim them and try again.",
+      }[err && err.code] || "Couldn't reach Claude. Try again, or use \"Write it myself\".";
+      if (err && err.code === "not_granted") $("c-write").hidden = true;
+    } finally {
+      $("c-write").disabled = false; $("c-stop").hidden = true; ctl = null;
+    }
+  });
+  $("c-stop").addEventListener("click", () => ctl?.abort());
+  $("c-manual").addEventListener("click", () => {
+    const l = listings.find((x) => x.id === $("c-listing").value);
+    if (!l) { $("c-listing").focus(); return; }
+    showResult({ summary: $("c-notes").value.trim() }, l, false);
+    $("r-summary").focus();
+  });
+  $("r-status").addEventListener("change", () => {
+    const line = $("r-status-line").querySelector(".pill");
+    if (line) line.replaceWith(pill($("r-status").value));
+  });
+  $("r-clear").addEventListener("click", () => {
+    $("result").hidden = true; $("c-notes").value = "";
+    $("c-hint").className = "muted"; $("c-hint").textContent = "Paste or type your notes from the next call.";
+  });
+
+  function summaryText() {
+    const l = listings.find((x) => x.id === $("c-listing").value) || {};
+    const steps = $("r-steps").value.split("\n").map((s) => s.trim()).filter(Boolean);
+    return [
+      `Call summary: ${l.address || ""} (${todayISO()})`,
+      `Status: ${STATUS[$("r-status").value].long}`,
+      "", $("r-summary").value.trim(),
+      steps.length ? "\nNext steps:\n" + steps.map((s) => "- " + s).join("\n") : "",
+      $("r-follow").value ? `Follow up by: ${$("r-follow").value}` : "",
+    ].filter((x) => x !== "").join("\n");
+  }
+  $("r-copy").addEventListener("click", (e) => copy(summaryText(), e.currentTarget, "Copied"));
+
+  $("r-save").addEventListener("click", async () => {
+    const l = listings.find((x) => x.id === $("c-listing").value);
+    const summary = $("r-summary").value.trim();
+    if (!db || !l) return;
+    if (!summary) { $("r-msg").replaceChildren(el("div", { class: "notice err", text: "Write a summary before saving." })); $("r-summary").focus(); return; }
+    const btn = $("r-save"); btn.disabled = true;
+    const now = new Date().toISOString();
+    const status = $("r-status").value;
+    const steps = $("r-steps").value.split("\n").map((s) => s.trim()).filter(Boolean);
+    try {
+      await db.collection("calls").add({
+        listingId: l.id, address: l.address, createdAt: now, status, summary,
+        evidence: $("r-evidence").value.trim(), nextSteps: steps, followUp: $("r-follow").value || null,
+        rawNotes: $("c-notes").value.trim(),
+      });
+      const patch = { lastCallAt: now, followUp: $("r-follow").value || null };
+      if (status !== "unknown") Object.assign(patch, { status, confirmedAt: now, evidence: $("r-evidence").value.trim() });
+      await db.doc("listings/" + l.id).update(patch);
+      selected = l.id;
+      $("r-msg").replaceChildren(el("div", { class: "notice ok", text: status === "unknown"
+        ? "Saved. The call is logged, and the listing stays unconfirmed until someone reaches the landlord."
+        : `Saved. The listing now shows as ${STATUS[status].word} for your whole team.` }));
+      $("c-notes").value = "";
+      renderDetail();
+    } catch (err) {
+      $("r-msg").replaceChildren(el("div", { class: "notice err", text: writeError(err) }));
+    } finally { btn.disabled = false; }
+  });
+
+  // ---------- boot ----------
+  async function boot() {
+    if (!window.claude) {
+      setConn("off", "Open this page in Claude to connect to the listing database.");
+      $("listings").replaceChildren(el("div", { class: "empty", text: "The shared listing database is only available inside Claude." }));
+      return;
+    }
+    claude.use("sample").then((s) => {
+      sample = s;
+      if (!s) { $("c-write").hidden = true; $("c-hint").textContent = "AI summaries aren't available in this view. Write the summary yourself and the listing still updates."; }
+    });
+    db = await claude.use("db");
+    if (!db) {
+      setConn("off", "Sign in to Claude to use the listing database.");
+      $("listings").replaceChildren(el("div", { class: "empty", text: "You need to be signed in to Claude to read the listing database." }));
+      return;
+    }
+    setConn("", "Loading listings…");
+    db.collection("listings").onSnapshot((snap) => {
+      listings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setConn("live", `Live · ${listings.length} listing${listings.length === 1 ? "" : "s"} shared with your team`);
+      render();
+    }, (err) => setConn("off", err.code === "revoked" ? "Database access ended for this view." : "Lost the connection. Reload the page."));
+    db.collection("calls").orderBy("createdAt", "desc").limit(300).onSnapshot((snap) => {
+      calls = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderDetail();
+    }, () => {});
+  }
+  renderStrip();
+  boot();
+})();
+</script>
