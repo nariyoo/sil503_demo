@@ -1,0 +1,1030 @@
+<title>Eastside Intake Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working desk. Task rail on the left (tabs on phones), one task open at a time,
+   every task labelled with who is responsible for the result. */
+:root {
+  --paper: #f3f5f1;
+  --surface: #ffffff;
+  --sunk: #e8ece5;
+  --ink: #1c2622;
+  --muted: #5b6862;
+  --line: #d3dad3;
+  --accent: #155e52;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcebe6;
+  --ok: #2d6a2f;      --ok-soft: #e1efdc;
+  --warn: #8a5300;    --warn-soft: #fbedd2;
+  --decide: #2b4f8a;  --decide-soft: #e0e8f6;
+  --stop: #a1302a;    --stop-soft: #f8e1de;
+  --focus: #e0a100;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131916; --surface: #1b231f; --sunk: #232d28; --ink: #e6ece8; --muted: #9eaca5;
+    --line: #34413b; --accent: #6cc3ad; --accent-ink: #0d1a16; --accent-soft: #1f3a33;
+    --ok: #8fd18a; --ok-soft: #1f3320; --warn: #f0b860; --warn-soft: #3a2b12;
+    --decide: #9dbaf0; --decide-soft: #1d2a42; --stop: #f29a91; --stop-soft: #3d1f1c; --focus: #f0c040;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131916; --surface: #1b231f; --sunk: #232d28; --ink: #e6ece8; --muted: #9eaca5;
+  --line: #34413b; --accent: #6cc3ad; --accent-ink: #0d1a16; --accent-soft: #1f3a33;
+  --ok: #8fd18a; --ok-soft: #1f3320; --warn: #f0b860; --warn-soft: #3a2b12;
+  --decide: #9dbaf0; --decide-soft: #1d2a42; --stop: #f29a91; --stop-soft: #3d1f1c; --focus: #f0c040;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--f-body); }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 1.35rem; font-weight: 700; }
+h2 { font-size: 1.75rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.shell { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100%; }
+.rail { background: var(--surface); border-right: 1px solid var(--line); padding: 20px 14px; position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+.brand { display: flex; flex-direction: column; gap: 2px; padding-inline: 6px; }
+.brand small { color: var(--muted); font-size: .8rem; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav button { all: unset; cursor: pointer; display: grid; gap: 3px; padding: 9px 10px; border-radius: var(--r); }
+.nav button:hover { background: var(--sunk); }
+.nav button[aria-current="true"] { background: var(--accent-soft); }
+.nav button:focus-visible { outline: 3px solid var(--focus); }
+.nav .t { font-weight: 700; font-size: .95rem; }
+.rail .privacy { font-size: .8rem; color: var(--muted); padding-inline: 6px; margin-top: auto; }
+
+main { padding-block: 28px 64px; padding-inline: clamp(16px, 4vw, 48px); min-width: 0; }
+.task { display: none; max-width: 980px; flex-direction: column; gap: 22px; }
+.task.on { display: flex; }
+.task-head { display: flex; flex-direction: column; gap: 8px; }
+.task-head p { color: var(--muted); max-width: 68ch; }
+
+.who { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; width: fit-content; }
+.who::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.who.auto { color: var(--ok); background: var(--ok-soft); }
+.who.review { color: var(--warn); background: var(--warn-soft); }
+.who.decide { color: var(--decide); background: var(--decide-soft); }
+.who.lawyer { color: var(--stop); background: var(--stop-soft); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 18px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 160px; }
+label, .lbl { font-size: .82rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; width: 100%; }
+textarea { min-height: 140px; resize: vertical; }
+input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--accent); }
+.btn { font: inherit; font-weight: 700; cursor: pointer; border-radius: var(--r); padding: 9px 16px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 5px 10px; font-size: .85rem; }
+
+.note { font-size: .88rem; color: var(--muted); }
+.callout { border-radius: var(--r); padding: 12px 14px; font-size: .92rem; display: flex; flex-direction: column; gap: 6px; }
+.callout.warn { background: var(--warn-soft); color: var(--ink); border-left: 4px solid var(--warn); }
+.callout.stop { background: var(--stop-soft); color: var(--ink); border-left: 4px solid var(--stop); }
+.callout.info { background: var(--accent-soft); color: var(--ink); border-left: 4px solid var(--accent); }
+.output { white-space: pre-wrap; background: var(--sunk); border-radius: var(--r); padding: 14px; min-height: 120px; overflow-wrap: anywhere; }
+.output.empty { color: var(--muted); font-style: italic; }
+.status { font-size: .85rem; color: var(--muted); min-height: 1.3em; }
+
+/* Overview */
+.grid8 { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.card { all: unset; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.card:hover { border-color: var(--accent); }
+.card:focus-visible { outline: 3px solid var(--focus); }
+.card p { font-size: .9rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: .88rem; }
+
+/* Pay stub table */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--sunk); white-space: nowrap; }
+td input { padding: 5px 6px; min-width: 84px; font-family: var(--f-mono); font-size: .85rem; }
+td input.wide { min-width: 150px; font-family: var(--f-body); }
+tr.src-photo td { background: var(--warn-soft); }
+tr.src-example td:first-child { box-shadow: inset 3px 0 0 var(--muted); }
+.flag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--stop-soft); color: var(--stop); margin: 2px 2px 0 0; white-space: nowrap; }
+.flag.okf { background: var(--ok-soft); color: var(--ok); }
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tot { background: var(--sunk); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.tot b { font-family: var(--f-mono); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.tot.alert { background: var(--stop-soft); }
+.tot.alert b { color: var(--stop); }
+
+/* Checklists */
+.checks { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.checks label { display: flex; gap: 10px; align-items: start; font-size: .97rem; font-weight: 400; color: var(--ink); letter-spacing: 0; cursor: pointer; }
+.checks input { margin-top: 5px; }
+.langs { display: flex; flex-wrap: wrap; gap: 6px; }
+.langs button { font: inherit; font-size: .88rem; cursor: pointer; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.langs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.script { font-size: 1.05rem; line-height: 1.6; background: var(--sunk); padding: 14px 16px; border-radius: var(--r); }
+.decision { display: flex; flex-wrap: wrap; gap: 8px; }
+.decision label { display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; color: var(--ink); font-size: .95rem; cursor: pointer; }
+.decision label:has(input:checked) { border-color: var(--decide); background: var(--decide-soft); }
+.count { font-family: var(--f-mono); font-size: 2rem; font-weight: 500; color: var(--decide); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.fields .full { grid-column: 1 / -1; }
+.fields textarea { min-height: 70px; }
+.ask { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.pill { font-size: .78rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; width: fit-content; }
+.pill.draft { background: var(--warn-soft); color: var(--warn); }
+.pill.done { background: var(--ok-soft); color: var(--ok); }
+.ai-off { display: none; }
+body.no-ai .ai-off { display: flex; }
+
+@media (max-width: 820px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: sticky; top: env(safe-area-inset-top, 0px); height: auto; z-index: 5; padding: 10px 16px; gap: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand small, .rail .privacy, .nav .who { display: none; }
+  .nav { flex-direction: row; overflow-x: auto; gap: 4px; scrollbar-width: thin; }
+  .nav button { white-space: nowrap; padding: 6px 10px; }
+  h2 { font-size: 1.45rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .task.on { animation: rise .18s ease-out; }
+  @keyframes rise { from { transform: translateY(4px); } to { transform: none; } }
+}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Eastside Intake Desk</h1>
+      <small>Eastside Worker Center · advocate tools</small>
+    </div>
+    <nav class="nav" id="nav" aria-label="Tasks"></nav>
+    <p class="privacy">Nothing typed here is saved. Closing or reloading the page clears it. Buttons marked “Ask Claude” send that text to Claude on your account, so leave out Social Security numbers and immigration details.</p>
+  </aside>
+
+  <main>
+    <!-- OVERVIEW -->
+    <section class="task on" id="overview" data-title="Overview">
+      <div class="task-head">
+        <h2>Before the first meeting, and during it</h2>
+        <p>Eight jobs from the walk-in workflow. Each one says who owns the result. The tool can draft, total and format. Advocates review drafts and make referral decisions. Immigration questions go to a lawyer.</p>
+      </div>
+      <div class="legend">
+        <span class="who auto">Ready to use</span>
+        <span class="who review">Draft · someone reviews</span>
+        <span class="who decide">Advocate decides</span>
+        <span class="who lawyer">Lawyer only</span>
+      </div>
+      <div class="grid8" id="cards"></div>
+      <div class="callout warn ai-off"><strong>Claude isn’t connected in this view.</strong> Pay stub totals, the document list, the referral checklist and reminders still work. Letter explanations, complaint drafts and flyer translation need Claude.</div>
+    </section>
+
+    <!-- 1. LETTER -->
+    <section class="task" id="letter" data-title="Explain a letter">
+      <div class="task-head">
+        <span class="who review">Draft · advocate reviews with worker</span>
+        <h2>Explain an employer’s letter</h2>
+        <p>Add photos of the letter or paste its text. You get a plain-language explanation in the worker’s language, plus a short English summary for you. Read it with the worker and correct anything that looks wrong.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <div class="field"><label for="letter-photos">Photos of the letter (optional)</label><input id="letter-photos" type="file" accept="image/*" multiple></div>
+          <div class="field"><label for="letter-text">Or paste the letter text</label><textarea id="letter-text">Dear Maria Lopez,
+
+This letter is to inform you that effective October 17, 2026, your position as Housekeeping Attendant is being reduced from full-time to part-time (20 hours per week) due to a decrease in business. Your final paycheck for hours worked through October 16 will be issued on the regular pay date. Any accrued vacation time will be forfeited per company policy.
+
+If you wish to discuss this decision, you must contact Human Resources in writing within 10 business days of the date of this letter.
+
+Sincerely,
+Brightway Hospitality Group, Human Resources</textarea>
+            <span class="note">Example letter loaded. Replace it with the worker’s letter.</span></div>
+          <div class="row">
+            <div class="field"><label for="letter-lang">Explain in</label><select id="letter-lang"></select></div>
+            <button class="btn" id="letter-go" data-ai>Ask Claude to explain</button>
+            <button class="btn ghost" id="letter-stop" hidden>Stop</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Explanation</h3>
+          <div class="output empty" id="letter-out">The explanation will appear here.</div>
+          <div class="row"><button class="btn ghost small" data-copy="letter-out">Copy</button><span class="status" id="letter-status"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PAY STUBS -->
+    <section class="task" id="paystubs" data-title="Pay stub totals">
+      <div class="task-head">
+        <span class="who auto">Tool calculates · advocate checks the stubs</span>
+        <h2>Add up hours and pay</h2>
+        <p>One row per pay stub. The page does the math itself. Claude can read numbers off photos, but those rows are highlighted until you compare them with the paper stub.</p>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <div class="field" style="flex:0 1 220px"><label for="minwage">Minimum wage to compare ($/hour)</label><input id="minwage" type="number" step="0.01" value="7.25"></div>
+          <p class="note" style="flex:1 1 260px">Set this to your state or city minimum. $7.25 is the federal floor, and most states are higher.</p>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Employer</th><th>Period start</th><th>Period end</th><th>Reg. hours</th><th>OT hours</th><th>Rate $/hr</th><th>Gross $</th><th>Net $</th><th>Checks</th><th></th></tr></thead>
+            <tbody id="stub-body"></tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="stub-add">Add a stub</button>
+          <button class="btn ghost" id="stub-clear">Clear all rows</button>
+          <span class="note" id="stub-example-note">The first rows are examples. Clear them before entering a worker’s stubs.</span>
+        </div>
+        <div class="row" id="stub-photo-row">
+          <div class="field"><label for="stub-photos">Read stubs from photos</label><input id="stub-photos" type="file" accept="image/*" multiple></div>
+          <button class="btn" id="stub-read" data-ai>Ask Claude to read them</button>
+          <span class="status" id="stub-status"></span>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Totals</h3>
+        <div class="totals" id="stub-totals"></div>
+        <p class="note">“Possible amount owed” is a rough estimate. It compares what was paid with the hours × the higher of the stated rate or the minimum wage, plus time-and-a-half over 40 hours when a stub covers one week or less. It does not cover tips, deductions, sick pay or multi-week overtime. Use it to start the conversation, and let legal aid confirm any amount.</p>
+        <div class="row"><button class="btn ghost small" id="stub-copy">Copy summary</button></div>
+      </div>
+    </section>
+
+    <!-- 3. CHECKLIST -->
+    <section class="task" id="checklist" data-title="What to bring">
+      <div class="task-head">
+        <span class="who auto">Ready to send</span>
+        <h2>Documents to bring to the first meeting</h2>
+        <p>Send this list when someone joins the waiting list, so the first meeting can start with their papers on the table. Untick anything that doesn’t apply.</p>
+      </div>
+      <div class="panel">
+        <div class="langs" id="check-langs" role="group" aria-label="List language"></div>
+        <h3 id="check-title"></h3>
+        <ul class="checks" id="check-items"></ul>
+        <ul class="checks" id="check-notes" style="color:var(--muted)"></ul>
+        <div class="row"><button class="btn" id="check-copy">Copy list for text or WhatsApp</button><span class="status" id="check-status"></span></div>
+        <p class="note">Translations were drafted for this tool. Have a fluent staff member read the Kreyòl and Portuguese versions once before you use them widely.</p>
+      </div>
+    </section>
+
+    <!-- 4. COMPLAINT -->
+    <section class="task" id="complaint" data-title="Complaint draft">
+      <div class="task-head">
+        <span class="who review">Draft · advocate reviews with worker</span>
+        <h2>Draft a wage complaint</h2>
+        <p>Type or paste the worker’s account in any language. Claude sorts it into the fields most wage complaint forms ask for, in English, and lists what is still missing. Nothing is filed from here. Copy the fields onto the agency’s actual form after the worker confirms them.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <div class="field"><label for="acct">Worker’s account</label><textarea id="acct" style="min-height:220px">Trabajé en Sunrise Car Wash en la calle Pine desde marzo hasta el 15 de agosto de 2026. El supervisor se llama Kevin. Me prometieron $15 la hora. Trabajaba de lunes a sábado, como 50 horas por semana, pero me pagaban solo 40 horas en efectivo. Las últimas dos semanas no me pagaron nada. Cuando le pregunté a Kevin me dijo que ya no volviera. Mi compañero José vio todo. Tengo fotos de mi horario y mensajes de WhatsApp con Kevin.</textarea>
+            <span class="note">Example account loaded (in Spanish).</span></div>
+          <div class="row">
+            <div class="field"><label for="acct-name">Worker’s name</label><input id="acct-name" placeholder="As they want it on the form"></div>
+            <div class="field"><label for="acct-lang">Worker reads best in</label><select id="acct-lang"></select></div>
+          </div>
+          <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:400"><input type="checkbox" id="acct-totals" checked> Include totals from the pay stub tool</label>
+          <div class="row"><button class="btn" id="acct-go" data-ai>Ask Claude to draft</button><span class="status" id="acct-status"></span></div>
+          <div class="callout info">Claude is told to use only facts in the account, leave blanks rather than guess, and leave out immigration status and Social Security numbers.</div>
+        </div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between"><h3>Draft fields</h3><span class="pill draft" id="acct-pill">Not reviewed</span></div>
+          <div class="fields" id="acct-fields"><p class="note full">The draft fields will appear here.</p></div>
+          <div id="acct-missing"></div>
+          <div class="row">
+            <button class="btn ghost small" id="acct-copy" disabled>Copy draft</button>
+            <button class="btn ghost small" id="acct-readback" data-ai disabled>Explain draft to worker in their language</button>
+          </div>
+          <div class="output empty" id="acct-readback-out" hidden></div>
+          <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:400"><input type="checkbox" id="acct-confirm" disabled> The worker heard the draft and says it is accurate</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. IMMIGRATION -->
+    <section class="task" id="immigration" data-title="Immigration question">
+      <div class="task-head">
+        <span class="who lawyer">Lawyer only</span>
+        <h2>“Could filing affect my immigration case?”</h2>
+        <p>This tool will not answer that question, and advocates shouldn’t either. The answer depends on the person’s full immigration history, any pending applications, and the kind of complaint. A wrong answer in either direction can cause real harm, and only a lawyer or accredited representative can give it.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <h3>What to say</h3>
+          <div class="langs" id="imm-langs" role="group" aria-label="Script language"></div>
+          <p class="script" id="imm-script"></p>
+          <div class="row"><button class="btn ghost small" data-copy="imm-script">Copy</button></div>
+        </div>
+        <div class="panel">
+          <h3>What to do</h3>
+          <ul class="ask">
+            <li>Don’t guess or reassure. “It should be fine” and “it’s too risky” are both legal advice.</li>
+            <li>Don’t write immigration details into intake notes or the complaint draft unless the lawyer asks.</li>
+            <li>If there is an upcoming immigration hearing, interview or deadline, write down the date and tell legal aid it is urgent.</li>
+            <li>Tell the worker when they should expect to hear from the lawyer, and that they can wait to decide about filing.</li>
+          </ul>
+          <div class="field"><label for="imm-date">Upcoming immigration date, if any</label><input id="imm-date" type="date"></div>
+          <button class="btn" id="imm-flag">Flag for legal aid referral</button>
+          <span class="status" id="imm-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. REFERRAL -->
+    <section class="task" id="referral" data-title="Legal aid referral">
+      <div class="task-head">
+        <span class="who decide">Advocate decides</span>
+        <h2>Does this case go to legal aid?</h2>
+        <p>Tick what applies. The page counts the factors and builds the referral note, but the decision is yours. Review this list with your legal aid partner and change it to match what they want to receive.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <h3>Factors that point to legal aid</h3>
+          <ul class="checks" id="ref-items"></ul>
+          <div class="row"><div class="field" style="flex:0 1 220px"><label for="ref-threshold">Amount that needs a lawyer ($)</label><input id="ref-threshold" type="number" value="5000"></div></div>
+        </div>
+        <div class="panel">
+          <div class="row" style="align-items:center"><span class="count" id="ref-count">0</span><span class="note">of <span id="ref-total"></span> factors ticked</span></div>
+          <p class="note" id="ref-hint"></p>
+          <div class="lbl">Your decision</div>
+          <div class="decision" id="ref-decision">
+            <label><input type="radio" name="dec" value="Refer to legal aid"> Refer to legal aid</label>
+            <label><input type="radio" name="dec" value="Handle at the center"> Handle at the center</label>
+            <label><input type="radio" name="dec" value="Need more information"> Need more information</label>
+          </div>
+          <div class="field"><label for="ref-why">Reason (goes in the note)</label><textarea id="ref-why" style="min-height:80px"></textarea></div>
+          <div class="field"><label for="ref-adv">Advocate</label><input id="ref-adv"></div>
+          <h3>Referral note</h3>
+          <div class="output" id="ref-note"></div>
+          <div class="row"><button class="btn ghost small" data-copy="ref-note">Copy note</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. REMINDERS -->
+    <section class="task" id="reminders" data-title="Reminders">
+      <div class="task-head">
+        <span class="who auto">Ready to send</span>
+        <h2>Appointment reminders</h2>
+        <p>Builds a short reminder in the worker’s language. Send one two days before and one the morning of. Keep reminders free of case details, since other people may see the worker’s phone. Only text people who agreed to get messages.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <div class="fields">
+            <div class="field"><label for="rm-name">First name</label><input id="rm-name" value="Rosa"></div>
+            <div class="field"><label for="rm-phone">Phone, with country code</label><input id="rm-phone" value="+1 555 010 4477" inputmode="tel"></div>
+            <div class="field"><label for="rm-lang">Language</label><select id="rm-lang"></select></div>
+            <div class="field"><label for="rm-when">Date and time</label><input id="rm-when" type="datetime-local"></div>
+            <div class="field"><label for="rm-adv">Advocate</label><input id="rm-adv" value="Ana"></div>
+            <div class="field"><label for="rm-place">Place</label><input id="rm-place" value="Eastside Worker Center"></div>
+            <label class="full" style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:400"><input type="checkbox" id="rm-bring" checked> Add the “what to bring” list</label>
+          </div>
+          <p class="note">Example worker filled in. Replace with the real details.</p>
+        </div>
+        <div class="panel">
+          <h3>Message</h3>
+          <div class="output" id="rm-out"></div>
+          <div class="row">
+            <button class="btn" id="rm-copy">Copy message</button>
+            <a class="btn ghost" id="rm-wa" href="#" target="_blank" rel="noopener">Open in WhatsApp</a>
+          </div>
+          <p class="note">This page can’t send messages itself. “Open in WhatsApp” fills in the message on WhatsApp Web or the app, and you press send there. For a regular text, copy the message into your phone. Number: <span class="mono" id="rm-num"></span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. FLYER -->
+    <section class="task" id="flyer" data-title="Flyer translation">
+      <div class="task-head">
+        <span class="who review">Draft · fluent speaker reviews</span>
+        <h2>Translate the know-your-rights flyer</h2>
+        <p>Claude drafts the translation and lists phrases it was unsure about. A fluent Kreyòl speaker must review it before it is printed. Machine translation of Haitian Creole is less reliable than Spanish, and a wrong word about legal rights can mislead people.</p>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <div class="field"><label for="fl-src">Flyer text (English)</label><textarea id="fl-src" style="min-height:300px">KNOW YOUR RIGHTS AT WORK
+
+You have the right to be paid for every hour you work.
+You must be paid at least the minimum wage.
+Most workers must be paid overtime (time and a half) for hours over 40 in one week.
+You have the right to a pay stub that shows your hours and pay.
+Your employer cannot punish or fire you for asking about unpaid wages.
+These rights apply to you whatever your immigration status.
+
+Keep a record of the days and hours you work. Save your pay stubs and messages from your boss.
+
+Need help? Come to Eastside Worker Center during walk-in hours. Our help is free. We speak Spanish, Haitian Creole and Portuguese.</textarea>
+            <span class="note">Example flyer loaded. Paste the center’s current flyer.</span></div>
+          <div class="row">
+            <div class="field"><label for="fl-lang">Translate into</label><select id="fl-lang"></select></div>
+            <button class="btn" id="fl-go" data-ai>Ask Claude to translate</button>
+            <button class="btn ghost" id="fl-stop" hidden>Stop</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between"><h3>Draft translation</h3><span class="pill draft" id="fl-pill">Draft · not reviewed</span></div>
+          <div class="output empty" id="fl-out">The translation will appear here.</div>
+          <span class="status" id="fl-status"></span>
+          <div class="row">
+            <div class="field"><label for="fl-reviewer">Reviewed by (fluent speaker)</label><input id="fl-reviewer"></div>
+            <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:400;flex:1 1 200px"><input type="checkbox" id="fl-ok"> I checked every line against the English</label>
+          </div>
+          <div class="row"><button class="btn ghost small" data-copy="fl-out">Copy translation</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+/* ---------- Task registry ---------- */
+const TASKS = [
+  ["letter", "Explain a letter", "review", "Draft · reviewed", "Plain-language explanation of an employer letter in Spanish, Kreyòl or Portuguese."],
+  ["paystubs", "Pay stub totals", "auto", "Calculated", "Total hours and pay from a stack of stubs, with possible underpayments flagged."],
+  ["checklist", "What to bring", "auto", "Ready to send", "The document list for the first meeting, in four languages."],
+  ["complaint", "Complaint draft", "review", "Draft · reviewed", "Sort the worker’s account into wage complaint fields and list what’s missing."],
+  ["immigration", "Immigration question", "lawyer", "Lawyer only", "What to say when a worker asks how filing affects their immigration case."],
+  ["referral", "Legal aid referral", "decide", "Advocate decides", "Checklist and referral note. The advocate makes the call."],
+  ["reminders", "Reminders", "auto", "Ready to send", "Appointment reminders for text or WhatsApp in the worker’s language."],
+  ["flyer", "Flyer translation", "review", "Draft · reviewed", "Draft a Haitian Creole flyer for a fluent speaker to check."],
+];
+const nav = $("nav"), cards = $("cards");
+function addNav(id, title, kind, tag) {
+  const b = document.createElement("button");
+  b.dataset.go = id;
+  b.innerHTML = `<span class="t"></span>` + (kind ? `<span class="who ${kind}"></span>` : "");
+  b.querySelector(".t").textContent = title;
+  if (kind) b.querySelector(".who").textContent = tag;
+  nav.append(b);
+}
+addNav("overview", "Overview");
+for (const [id, title, kind, tag, blurb] of TASKS) {
+  addNav(id, title, kind, tag);
+  const c = document.createElement("button");
+  c.className = "card"; c.dataset.go = id;
+  c.innerHTML = `<span class="who ${kind}"></span><h3></h3><p></p>`;
+  c.querySelector(".who").textContent = tag;
+  c.querySelector("h3").textContent = title;
+  c.querySelector("p").textContent = blurb;
+  cards.append(c);
+}
+function show(id) {
+  if (!$(id) || !$(id).classList.contains("task")) id = "overview";
+  document.querySelectorAll(".task").forEach(s => s.classList.toggle("on", s.id === id));
+  nav.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", String(b.dataset.go === id)));
+  if (id === "referral") renderReferral();
+  try { history.replaceState(null, "", "#" + id); } catch {}
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener("click", (e) => {
+  const g = e.target.closest("[data-go]");
+  if (g) show(g.dataset.go);
+  const c = e.target.closest("[data-copy]");
+  if (c) copy($(c.dataset.copy).textContent, c);
+});
+show(location.hash.slice(1) || "overview");
+
+/* ---------- Helpers ---------- */
+async function copy(text, btn) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+  catch {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch {}
+    ta.remove(); btn.textContent = ok ? "Copied" : "Select and copy by hand";
+  }
+  setTimeout(() => (btn.textContent = old), 1600);
+}
+const money = (n) => "$" + (Number.isFinite(n) ? n : 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+
+const LANGS = { es: "Español", ht: "Kreyòl ayisyen", pt: "Português", en: "English" };
+const LANG_EN = { es: "Spanish", ht: "Haitian Creole", pt: "Brazilian Portuguese", en: "English" };
+function fillLangSelect(sel, def) {
+  for (const [k, v] of Object.entries(LANGS)) { const o = new Option(v, k); sel.add(o); }
+  sel.value = def;
+}
+["letter-lang", "acct-lang", "rm-lang"].forEach(id => fillLangSelect($(id), "es"));
+fillLangSelect($("fl-lang"), "ht");
+[...$("fl-lang").options].forEach(o => { if (o.value === "en") o.remove(); });
+function langButtons(el, current, onPick) {
+  el.innerHTML = "";
+  for (const [k, v] of Object.entries(LANGS)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = v; b.setAttribute("aria-pressed", String(k === current));
+    b.onclick = () => onPick(k);
+    el.append(b);
+  }
+}
+
+/* ---------- Claude (sample capability) ---------- */
+let sample = null, canImages = false;
+function setAi(on) {
+  document.body.classList.toggle("no-ai", !on);
+  document.querySelectorAll("[data-ai]").forEach(b => { if (!on) { b.disabled = true; b.title = "Claude isn’t available in this view"; } });
+}
+setAi(false);
+if (window.claude && typeof window.claude.use === "function") {
+  window.claude.use("sample").then(async (s) => {
+    if (!s) return;
+    sample = s;
+    try { canImages = !!(await s.limits()).images; } catch { canImages = false; }
+    document.body.classList.remove("no-ai");
+    ["letter-go", "acct-go", "fl-go", "stub-read"].forEach(id => { $(id).disabled = false; $(id).title = ""; });
+    if (!canImages) { $("letter-photos").closest(".field").hidden = true; $("stub-photo-row").hidden = true; }
+  }).catch(() => {});
+}
+function aiError(e) {
+  switch (e && e.code) {
+    case "cancelled": return "Stopped.";
+    case "not_granted": case "sampling_disabled": case "not_declared": case "capability_disabled":
+      setAi(false); return "Claude isn’t allowed for this page. Everything else still works.";
+    case "rate_limited": return "Too many requests right now. Wait a minute and try again.";
+    case "session_expired": return "Sign in to Claude again, then retry.";
+    case "image_rejected": return "One of the photos couldn’t be read. Try a clearer JPEG or PNG.";
+    case "prompt_too_large": return "That text is too long. Paste a shorter part.";
+    case "refused": return "Claude declined this request. Try rewording it.";
+    case "invalid_json": return "Claude’s answer wasn’t in the expected format. Try again.";
+    default: return "Something went wrong reaching Claude. Try again.";
+  }
+}
+const GUARD = "Rules: You are helping non-lawyer advocates at a worker center. Do not give legal advice and do not predict outcomes. If anything touches immigration status or immigration consequences, do not answer it; say that a lawyer must advise on that. Never invent facts, names, dates or amounts.";
+
+/* ---------- 1. Letter ---------- */
+let letterCtl = null;
+$("letter-go").onclick = async () => {
+  if (!sample) return;
+  const text = $("letter-text").value.trim();
+  const files = canImages ? [...$("letter-photos").files] : [];
+  if (!text && !files.length) { $("letter-status").textContent = "Add a photo or paste the letter first."; return; }
+  const lang = LANG_EN[$("letter-lang").value];
+  const prompt = `${GUARD}
+
+Task: A worker brought this letter from their employer. Explain it to the worker in ${lang}, in plain words a person with a 6th-grade reading level understands. Use short sentences and plain text only (no markdown symbols).
+
+Write these parts, each with a short heading in ${lang}:
+1. Who sent it and what kind of letter it is.
+2. What it says, in 3 to 6 short points.
+3. Dates, deadlines and money amounts in the letter, each on its own line. Mark deadlines clearly.
+4. Questions the worker may want to ask the advocate.
+Then a line "---" and a 3-sentence summary in English for the advocate, including any deadline and anything that may need legal aid.
+
+If part of the letter is unreadable, say which part instead of guessing.
+${files.length ? "The letter is in the attached photos." : ""}
+${text ? "Letter text:\n\"\"\"\n" + text.slice(0, 20000) + "\n\"\"\"" : ""}`;
+  const out = $("letter-out");
+  out.classList.remove("empty"); out.textContent = "Thinking…";
+  $("letter-go").disabled = true; $("letter-stop").hidden = false; $("letter-status").textContent = "";
+  letterCtl = new AbortController();
+  try {
+    const opts = { signal: letterCtl.signal, onText: ({ text }) => { out.textContent = text; } };
+    if (files.length) opts.images = files;
+    const r = await sample(prompt, opts);
+    $("letter-status").textContent = r.truncated ? "The answer was cut short. Try a shorter letter." : "Draft. Read it through with the worker.";
+  } catch (e) {
+    out.textContent = e.text || ""; if (!e.text) out.classList.add("empty");
+    $("letter-status").textContent = aiError(e);
+  } finally { $("letter-go").disabled = !sample; $("letter-stop").hidden = true; }
+};
+$("letter-stop").onclick = () => letterCtl && letterCtl.abort();
+
+/* ---------- 2. Pay stubs ---------- */
+let stubs = [
+  { employer: "Example: Bright Clean Services", start: "2026-08-03", end: "2026-08-09", hours: 46, ot: 0, rate: 16, gross: 736, net: 652.10, src: "example" },
+  { employer: "Example: Bright Clean Services", start: "2026-08-10", end: "2026-08-16", hours: 40, ot: 0, rate: 16, gross: 640, net: 571.40, src: "example" },
+  { employer: "Example: Bright Clean Services", start: "2026-08-17", end: "2026-08-23", hours: 38, ot: 0, rate: 16, gross: 480, net: 431.20, src: "example" },
+];
+const COLS = [["employer", "text"], ["start", "date"], ["end", "date"], ["hours", "number"], ["ot", "number"], ["rate", "number"], ["gross", "number"], ["net", "number"]];
+
+function analyze(s) {
+  const H = num(s.hours) + num(s.ot);
+  const minw = num($("minwage").value);
+  const flags = [];
+  let days = null;
+  if (s.start && s.end) days = Math.round((new Date(s.end) - new Date(s.start)) / 864e5) + 1;
+  const weekly = days !== null && days > 0 && days <= 7;
+  const gross = num(s.gross);
+  if (H > 0 && gross > 0 && minw > 0 && gross / H < minw - 0.005) flags.push("Below minimum wage");
+  if (weekly && H > 40 && num(s.ot) === 0) flags.push("Over 40 hrs, no overtime shown");
+  if (num(s.rate) > 0 && H > 0) {
+    const expected = num(s.hours) * num(s.rate) + num(s.ot) * num(s.rate) * 1.5;
+    if (gross < expected - 0.5) flags.push("Paid less than hours × rate");
+  }
+  if (gross > 0 && num(s.net) > gross) flags.push("Net is more than gross: check");
+  const r = Math.max(num(s.rate), minw);
+  let due = 0;
+  if (H > 0 && r > 0) due = weekly ? Math.min(H, 40) * r + Math.max(0, H - 40) * r * 1.5 : H * r;
+  const owed = Math.max(0, due - gross);
+  return { H, flags, owed, weekly };
+}
+function renderStubs() {
+  const body = $("stub-body");
+  body.innerHTML = "";
+  stubs.forEach((s, i) => {
+    const tr = document.createElement("tr");
+    tr.className = "src-" + s.src;
+    for (const [k, type] of COLS) {
+      const td = document.createElement("td");
+      const inp = document.createElement("input");
+      inp.type = type; inp.value = s[k] ?? ""; inp.id = `stub-${i}-${k}`;
+      inp.setAttribute("aria-label", k);
+      if (type === "number") inp.step = "0.01";
+      if (k === "employer") inp.className = "wide";
+      inp.oninput = () => { s[k] = type === "number" ? inp.value : inp.value; if (s.src === "photo") {} renderTotals(); renderFlags(i); };
+      td.append(inp); tr.append(td);
+    }
+    const fl = document.createElement("td"); fl.id = "flags-" + i; tr.append(fl);
+    const act = document.createElement("td");
+    if (s.src === "photo") {
+      const ok = document.createElement("button"); ok.className = "btn ghost small"; ok.textContent = "Checked";
+      ok.title = "I compared this row with the paper stub";
+      ok.onclick = () => { s.src = "manual"; renderStubs(); };
+      act.append(ok);
+    }
+    const del = document.createElement("button"); del.className = "btn ghost small"; del.textContent = "Remove";
+    del.onclick = () => { stubs.splice(i, 1); renderStubs(); };
+    act.append(del); act.style.whiteSpace = "nowrap";
+    tr.append(act);
+    body.append(tr);
+    renderFlags(i);
+  });
+  $("stub-example-note").hidden = !stubs.some(s => s.src === "example");
+  renderTotals();
+}
+function renderFlags(i) {
+  const td = $("flags-" + i); if (!td) return;
+  const a = analyze(stubs[i]);
+  td.innerHTML = "";
+  const list = a.flags.length ? a.flags : ["Looks consistent"];
+  for (const f of list) { const sp = document.createElement("span"); sp.className = "flag" + (a.flags.length ? "" : " okf"); sp.textContent = f; td.append(sp); }
+  if (stubs[i].src === "photo") { const sp = document.createElement("span"); sp.className = "flag"; sp.textContent = "Read from photo: compare with stub"; td.append(sp); }
+}
+function stubSummary() {
+  let hours = 0, gross = 0, net = 0, owed = 0, flagged = 0, unchecked = 0;
+  for (const s of stubs) {
+    const a = analyze(s);
+    hours += a.H; gross += num(s.gross); net += num(s.net); owed += a.owed;
+    if (a.flags.length) flagged++;
+    if (s.src === "photo") unchecked++;
+  }
+  const dates = stubs.flatMap(s => [s.start, s.end]).filter(Boolean).sort();
+  return { n: stubs.length, hours, gross, net, owed, flagged, unchecked, from: dates[0], to: dates[dates.length - 1], example: stubs.some(s => s.src === "example") };
+}
+function renderTotals() {
+  const t = stubSummary();
+  const tiles = [
+    ["Pay stubs", String(t.n)],
+    ["Total hours", t.hours.toLocaleString("en-US", { maximumFractionDigits: 2 })],
+    ["Total gross pay", money(t.gross)],
+    ["Total net pay", money(t.net)],
+    ["Effective $/hour", t.hours ? money(t.gross / t.hours) : "—"],
+    ["Possible amount owed", money(t.owed), t.owed > 0],
+  ];
+  $("stub-totals").innerHTML = "";
+  for (const [l, v, alert] of tiles) {
+    const d = document.createElement("div"); d.className = "tot" + (alert ? " alert" : "");
+    d.innerHTML = `<span class="lbl"></span><b></b>`;
+    d.querySelector(".lbl").textContent = l; d.querySelector("b").textContent = v;
+    $("stub-totals").append(d);
+  }
+}
+function stubSummaryText() {
+  const t = stubSummary();
+  const lines = [
+    `Pay stub summary${t.example ? " (INCLUDES EXAMPLE ROWS)" : ""}: ${t.n} stubs${t.from ? `, ${t.from} to ${t.to}` : ""}`,
+    `Total hours: ${t.hours.toFixed(2)} · Gross: ${money(t.gross)} · Net: ${money(t.net)}${t.hours ? ` · Effective rate: ${money(t.gross / t.hours)}/hr` : ""}`,
+    `Stubs with possible problems: ${t.flagged}. Rough possible amount owed: ${money(t.owed)} (compared with $${num($("minwage").value).toFixed(2)}/hr minimum; estimate only).`,
+  ];
+  if (t.unchecked) lines.push(`${t.unchecked} row(s) read from photos have not been checked against the paper stubs.`);
+  stubs.forEach(s => { const a = analyze(s); if (a.flags.length) lines.push(`- ${s.start || "?"} to ${s.end || "?"}: ${a.flags.join("; ")}`); });
+  return lines.join("\n");
+}
+$("minwage").oninput = () => { stubs.forEach((_, i) => renderFlags(i)); renderTotals(); };
+$("stub-add").onclick = () => { stubs.push({ employer: stubs.length ? stubs[stubs.length - 1].employer.replace(/^Example: /, "") : "", start: "", end: "", hours: "", ot: "", rate: "", gross: "", net: "", src: "manual" }); renderStubs(); };
+$("stub-clear").onclick = () => { stubs = []; renderStubs(); };
+$("stub-copy").onclick = (e) => copy(stubSummaryText(), e.target);
+$("stub-read").onclick = async () => {
+  const files = [...$("stub-photos").files];
+  if (!sample || !files.length) { $("stub-status").textContent = "Choose one or more photos first."; return; }
+  $("stub-status").textContent = "Reading the stubs…"; $("stub-read").disabled = true;
+  try {
+    const rows = await sample.json(`The attached photos are pay stubs. Copy the numbers printed on each stub. Do not calculate, estimate or fill in anything that is not printed.
+Reply with only a JSON array, one object per pay stub, like:
+[{"employer":"ABC Inc","period_start":"2026-08-03","period_end":"2026-08-09","regular_hours":40,"overtime_hours":2,"hourly_rate":16,"gross_pay":688,"net_pay":601.5}]
+Dates as YYYY-MM-DD. Use null for anything not visible or unreadable.`, { images: files, modelTier: "default" });
+    if (!Array.isArray(rows)) throw { code: "invalid_json" };
+    stubs = stubs.filter(s => s.src !== "example");
+    for (const r of rows) {
+      const v = (x) => (x === null || x === undefined ? "" : String(x));
+      stubs.push({ employer: v(r.employer), start: v(r.period_start), end: v(r.period_end), hours: v(r.regular_hours), ot: v(r.overtime_hours), rate: v(r.hourly_rate), gross: v(r.gross_pay), net: v(r.net_pay), src: "photo" });
+    }
+    renderStubs();
+    $("stub-status").textContent = `Added ${rows.length} row(s). Compare each highlighted row with its stub, then press “Checked”.`;
+  } catch (e) { $("stub-status").textContent = aiError(e); }
+  finally { $("stub-read").disabled = !sample; }
+};
+renderStubs();
+
+/* ---------- 3. Checklist ---------- */
+const CHECK = {
+  title: { en: "What to bring to your first meeting", es: "Qué traer a su primera cita", ht: "Sa pou w pote nan premye randevou w la", pt: "O que trazer para sua primeira consulta" },
+  items: [
+    { en: "Pay stubs, paychecks, or bank statements that show your pay.", es: "Talones de pago, cheques o estados de cuenta del banco que muestren su pago.", ht: "Souch chèk, chèk, oswa relve bank ki montre peman ou.", pt: "Contracheques, cheques ou extratos bancários que mostrem seu pagamento." },
+    { en: "Any record of the days and hours you worked (calendar, notebook, photos or notes on your phone).", es: "Cualquier registro de los días y horas que trabajó (calendario, cuaderno, fotos o notas en su teléfono).", ht: "Nenpòt dosye sou jou ak lè ou te travay (kalandriye, kaye, foto oswa nòt nan telefòn ou).", pt: "Qualquer registro dos dias e horas que você trabalhou (calendário, caderno, fotos ou anotações no celular)." },
+    { en: "Text messages, WhatsApp messages, or emails with your boss or supervisor.", es: "Mensajes de texto, de WhatsApp o correos con su jefe o supervisor.", ht: "Mesaj tèks, mesaj WhatsApp, oswa imel ak bòs ou oswa sipèvizè ou.", pt: "Mensagens de texto, de WhatsApp ou e-mails com seu patrão ou supervisor." },
+    { en: "Letters or papers from your employer.", es: "Cartas o papeles de su empleador.", ht: "Lèt oswa papye patwon ou ba ou.", pt: "Cartas ou papéis do seu empregador." },
+    { en: "Letters or notices from any government agency.", es: "Cartas o avisos de cualquier agencia del gobierno.", ht: "Lèt oswa avi nenpòt ajans gouvènman voye ba ou.", pt: "Cartas ou avisos de qualquer órgão do governo." },
+    { en: "The employer’s name, address and phone number, and your supervisor’s name.", es: "El nombre, la dirección y el teléfono del empleador, y el nombre de su supervisor.", ht: "Non, adrès ak nimewo telefòn patwon an, ak non sipèvizè ou.", pt: "O nome, endereço e telefone do empregador, e o nome do seu supervisor." },
+    { en: "Names and phone numbers of coworkers who know what happened.", es: "Nombres y teléfonos de compañeros de trabajo que saben lo que pasó.", ht: "Non ak nimewo telefòn kòlèg travay ki konnen sa ki te pase.", pt: "Nomes e telefones de colegas de trabalho que sabem o que aconteceu." },
+    { en: "Any job offer, contract, or hiring papers.", es: "Cualquier oferta de trabajo, contrato o papeles de contratación.", ht: "Nenpòt òf travay, kontra, oswa papye anbochaj.", pt: "Qualquer oferta de emprego, contrato ou papéis de contratação." },
+    { en: "Tax forms (W-2 or 1099), if you have them.", es: "Formularios de impuestos (W-2 o 1099), si los tiene.", ht: "Fòm taks (W-2 oswa 1099), si ou genyen yo.", pt: "Formulários de impostos (W-2 ou 1099), se você tiver." },
+    { en: "A photo ID, if you have one. An ID from any country is fine.", es: "Una identificación con foto, si la tiene. Sirve una de cualquier país.", ht: "Yon kat idantite ak foto, si ou genyen youn. Kat nenpòt peyi bon.", pt: "Um documento com foto, se tiver. Pode ser de qualquer país." },
+  ],
+  notes: [
+    { en: "Bring copies or photos on your phone. Keep your originals.", es: "Traiga copias o fotos en su teléfono. Guarde los originales.", ht: "Pote kopi oswa foto nan telefòn ou. Kenbe orijinal yo lakay ou.", pt: "Traga cópias ou fotos no celular. Guarde os originais." },
+    { en: "You do not need to bring any papers about your immigration status.", es: "No necesita traer ningún papel sobre su estatus migratorio.", ht: "Ou pa bezwen pote okenn papye sou estati imigrasyon ou.", pt: "Você não precisa trazer nenhum documento sobre sua situação imigratória." },
+    { en: "If you don’t have some of these papers, come anyway.", es: "Si no tiene algunos de estos papeles, venga de todos modos.", ht: "Si ou pa gen kèk nan papye sa yo, vini kanmenm.", pt: "Se não tiver alguns desses documentos, venha mesmo assim." },
+  ],
+};
+let checkLang = "es";
+const checkOn = CHECK.items.map(() => true);
+function renderChecklist() {
+  langButtons($("check-langs"), checkLang, (k) => { checkLang = k; renderChecklist(); });
+  $("check-title").textContent = CHECK.title[checkLang];
+  const ul = $("check-items"); ul.innerHTML = "";
+  CHECK.items.forEach((it, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<label><input type="checkbox" id="chk-${i}"><span></span></label>`;
+    const cb = li.querySelector("input"); cb.checked = checkOn[i]; cb.onchange = () => (checkOn[i] = cb.checked);
+    li.querySelector("span").textContent = it[checkLang];
+    ul.append(li);
+  });
+  const nl = $("check-notes"); nl.innerHTML = "";
+  for (const n of CHECK.notes) { const li = document.createElement("li"); li.textContent = "• " + n[checkLang]; nl.append(li); }
+}
+function checklistText(lang) {
+  const items = CHECK.items.filter((_, i) => checkOn[i]).map(it => "• " + it[lang]);
+  return [CHECK.title[lang] + ":", ...items, "", ...CHECK.notes.map(n => n[lang])].join("\n");
+}
+$("check-copy").onclick = (e) => copy(checklistText(checkLang), e.target);
+renderChecklist();
+
+/* ---------- 4. Complaint ---------- */
+const FIELDS = [
+  ["worker_name", "Worker name"], ["preferred_language", "Preferred language"],
+  ["employer_name", "Employer / business name"], ["employer_address", "Employer address or location"],
+  ["supervisor", "Supervisor or owner"], ["job_title", "Job / type of work"],
+  ["start_date", "Start date"], ["end_date", "End date (or “still working”)"],
+  ["promised_pay", "Pay rate promised"], ["how_paid", "How paid (cash, check, deposit) and how often"],
+  ["usual_hours", "Usual days and hours"], ["unpaid_wages", "What was not paid", true],
+  ["what_happened", "What happened (first person)", true], ["retaliation", "Fired, threatened or punished after complaining?", true],
+  ["witnesses", "Witnesses"], ["documents", "Documents the worker has"],
+];
+let draft = null;
+$("acct-go").onclick = async () => {
+  if (!sample) return;
+  const acct = $("acct").value.trim();
+  if (!acct) { $("acct-status").textContent = "Add the worker’s account first."; return; }
+  $("acct-status").textContent = "Drafting… this can take up to a minute."; $("acct-go").disabled = true;
+  const keys = FIELDS.map(f => `"${f[0]}": string`).join(", ");
+  const prompt = `${GUARD}
+
+Task: Turn a worker's account (it may be in any language) into draft fields for a state wage complaint form, written in clear English.
+- Use only facts stated in the account. If a field isn't stated, use "" (empty string). Do not guess.
+- Leave out immigration status, visa or papers, and Social Security numbers entirely, even if mentioned.
+- "what_happened" is a short first-person narrative (I worked..., I was paid...), 4-8 sentences.
+- "missing" lists questions the advocate should ask to complete the form (short, in English).
+Reply with only one JSON object with these keys: {${keys}, "missing": string[]}.
+
+Worker name given by advocate: ${$("acct-name").value.trim() || "(not given)"}
+Worker's account:
+"""
+${acct.slice(0, 20000)}
+"""`;
+  try {
+    const d = await sample.json(prompt, { modelTier: "default" });
+    if (!d || typeof d !== "object") throw { code: "invalid_json" };
+    draft = d;
+    if ($("acct-name").value.trim()) draft.worker_name = $("acct-name").value.trim();
+    if (!draft.preferred_language) draft.preferred_language = LANG_EN[$("acct-lang").value];
+    renderDraft();
+    $("acct-status").textContent = "Draft ready. Edit any field below.";
+  } catch (e) { $("acct-status").textContent = aiError(e); }
+  finally { $("acct-go").disabled = !sample; }
+};
+function renderDraft() {
+  const box = $("acct-fields"); box.innerHTML = "";
+  for (const [k, label, long] of FIELDS) {
+    const f = document.createElement("div"); f.className = "field" + (long ? " full" : "");
+    const id = "df-" + k;
+    f.innerHTML = `<label for="${id}"></label>`;
+    f.querySelector("label").textContent = label;
+    const inp = document.createElement(long ? "textarea" : "input"); inp.id = id;
+    inp.value = String(draft[k] ?? ""); inp.oninput = () => { draft[k] = inp.value; unconfirm(); };
+    if (!inp.value) inp.placeholder = "Not in the account. Ask the worker.";
+    f.append(inp); box.append(f);
+  }
+  if ($("acct-totals").checked && stubs.length) {
+    const f = document.createElement("div"); f.className = "field full";
+    f.innerHTML = `<label for="df-totals">Pay stub totals (from the calculator)</label><textarea id="df-totals"></textarea>`;
+    f.querySelector("textarea").value = stubSummaryText(); f.querySelector("textarea").oninput = unconfirm;
+    box.append(f);
+  }
+  const m = $("acct-missing"); m.innerHTML = "";
+  const miss = Array.isArray(draft.missing) ? draft.missing.filter(Boolean) : [];
+  if (miss.length) {
+    const c = document.createElement("div"); c.className = "callout warn";
+    c.innerHTML = `<strong>Still missing: ask the worker</strong><ul class="ask"></ul>`;
+    for (const q of miss) { const li = document.createElement("li"); li.textContent = String(q); c.querySelector("ul").append(li); }
+    m.append(c);
+  }
+  $("acct-copy").disabled = false; $("acct-readback").disabled = !sample; $("acct-confirm").disabled = false;
+  unconfirm();
+}
+function unconfirm() { $("acct-confirm").checked = false; setPill(); }
+function setPill() {
+  const ok = $("acct-confirm").checked;
+  $("acct-pill").className = "pill " + (ok ? "done" : "draft");
+  $("acct-pill").textContent = ok ? "Worker confirmed" : "Not reviewed";
+}
+$("acct-confirm").onchange = setPill;
+function draftText() {
+  const lines = [`WAGE COMPLAINT DRAFT (${$("acct-confirm").checked ? "confirmed with worker" : "NOT YET CONFIRMED WITH WORKER"})`, ""];
+  for (const [k, label] of FIELDS) lines.push(`${label}: ${draft[k] || "[missing]"}`);
+  if ($("df-totals")) lines.push("", $("df-totals").value);
+  return lines.join("\n");
+}
+$("acct-copy").onclick = (e) => copy(draftText(), e.target);
+$("acct-readback").onclick = async () => {
+  if (!sample || !draft) return;
+  const out = $("acct-readback-out"); out.hidden = false; out.classList.remove("empty"); out.textContent = "Thinking…";
+  $("acct-readback").disabled = true;
+  try {
+    await sample(`${GUARD}
+
+Task: Translate this draft wage complaint into ${LANG_EN[$("acct-lang").value]} so an advocate can read it aloud to the worker and check it is accurate. Plain words, plain text, keep every fact and amount exactly. End with one line asking (in that language) whether anything is wrong or missing.
+
+${draftText()}`, { onText: ({ text }) => { out.textContent = text; } });
+  } catch (e) { out.textContent = (e.text || "") + "\n" + aiError(e); }
+  finally { $("acct-readback").disabled = !sample; }
+};
+
+/* ---------- 5. Immigration ---------- */
+const IMM = {
+  en: "That’s an important question, and you’re right to ask it before you decide. We are not lawyers, so we can’t tell you how filing could affect your immigration case. We will connect you with a lawyer who can look at your situation. You don’t have to decide anything about filing today.",
+  es: "Es una pregunta importante, y hace bien en preguntarla antes de decidir. No somos abogados, así que no podemos decirle cómo una queja podría afectar su caso de inmigración. Le vamos a conectar con un abogado que pueda revisar su situación. No tiene que decidir nada sobre la queja hoy.",
+  ht: "Se yon kesyon enpòtan, e ou fè byen poze l anvan ou deside. Nou pa avoka, kidonk nou pa ka di w ki jan pote plent ka afekte dosye imigrasyon ou. N ap mete w an kontak ak yon avoka ki ka gade sitiyasyon ou. Ou pa oblije deside anyen sou plent lan jodi a.",
+  pt: "É uma pergunta importante, e você faz bem em perguntar antes de decidir. Não somos advogados, então não podemos dizer como uma queixa pode afetar seu caso de imigração. Vamos colocar você em contato com um advogado que possa analisar sua situação. Você não precisa decidir nada sobre a queixa hoje.",
+};
+let immLang = "es";
+function renderImm() { langButtons($("imm-langs"), immLang, (k) => { immLang = k; renderImm(); }); $("imm-script").textContent = IMM[immLang]; }
+renderImm();
+$("imm-flag").onclick = () => {
+  refState.immigration = true;
+  $("imm-status").textContent = "Flagged. It is ticked on the referral checklist.";
+};
+
+/* ---------- 6. Referral ---------- */
+const REF = [
+  ["immigration", "The worker asked how filing could affect their immigration case."],
+  ["retaliation", "The worker was fired, threatened, or punished after complaining."],
+  ["deadline", "There is an agency or court deadline, or the worker got court or agency papers."],
+  ["amount", "The possible amount owed is over the amount below."],
+  ["lawyer", "The employer has a lawyer, or the worker signed something giving up claims."],
+  ["other_law", "There is also an injury, discrimination, harassment, or trafficking concern."],
+  ["group", "Several workers have the same problem with this employer."],
+  ["gone", "The business closed, changed its name, or the employer can’t be found."],
+];
+const refState = {};
+function renderReferral() {
+  const t = stubSummary();
+  const autoAmount = t.owed > num($("ref-threshold").value) && !t.example;
+  if (autoAmount) refState.amount = true;
+  const ul = $("ref-items"); ul.innerHTML = "";
+  for (const [k, label] of REF) {
+    const li = document.createElement("li");
+    li.innerHTML = `<label><input type="checkbox" id="ref-${k}"><span></span></label>`;
+    const cb = li.querySelector("input"); cb.checked = !!refState[k];
+    cb.onchange = () => { refState[k] = cb.checked; renderRefNote(); };
+    let text = label;
+    if (k === "amount") text += ` (Pay stub tool: ${money(t.owed)}${t.example ? ", example rows" : ""})`;
+    if (k === "immigration" && $("imm-date").value) text += ` Immigration date: ${$("imm-date").value}.`;
+    li.querySelector("span").textContent = text;
+    ul.append(li);
+  }
+  $("ref-total").textContent = REF.length;
+  renderRefNote();
+}
+function renderRefNote() {
+  const ticked = REF.filter(([k]) => refState[k]);
+  $("ref-count").textContent = ticked.length;
+  $("ref-hint").textContent = ticked.length
+    ? "Talk these through with the worker and decide below."
+    : "No factors ticked. Cases like this can often be handled at the center, but it is your call.";
+  const dec = document.querySelector('input[name="dec"]:checked');
+  const lines = [
+    "REFERRAL NOTE · Eastside Worker Center",
+    `Decision: ${dec ? dec.value : "[not decided yet]"}`,
+    `Advocate: ${$("ref-adv").value || "[name]"}`,
+  ];
+  if (draft && draft.worker_name) lines.push(`Worker: ${draft.worker_name}${draft.preferred_language ? " · reads " + draft.preferred_language : ""}`);
+  if (draft && draft.employer_name) lines.push(`Employer: ${draft.employer_name}`);
+  lines.push("", "Factors:");
+  if (ticked.length) ticked.forEach(([, l]) => lines.push("- " + l)); else lines.push("- none ticked");
+  if (refState.immigration && $("imm-date").value) lines.push(`- URGENT: immigration date ${$("imm-date").value}`);
+  if (stubs.length) lines.push("", stubSummaryText());
+  if ($("ref-why").value.trim()) lines.push("", "Reason: " + $("ref-why").value.trim());
+  $("ref-note").textContent = lines.join("\n");
+}
+$("ref-decision").onchange = renderRefNote;
+$("ref-why").oninput = renderRefNote;
+$("ref-adv").oninput = renderRefNote;
+$("ref-threshold").oninput = renderReferral;
+
+/* ---------- 7. Reminders ---------- */
+const HT_DAYS = ["dimanch", "lendi", "madi", "mèkredi", "jedi", "vandredi", "samdi"];
+const HT_MONTHS = ["janvye", "fevriye", "mas", "avril", "me", "jen", "jiyè", "out", "septanm", "oktòb", "novanm", "desanm"];
+function fmtWhen(d, lang) {
+  const hm = d.toLocaleTimeString(lang === "en" ? "en-US" : lang === "es" ? "es-US" : "pt-BR", { hour: "numeric", minute: "2-digit" });
+  if (lang === "ht") {
+    const h = String(d.getHours()).padStart(2, "0") + "h" + String(d.getMinutes()).padStart(2, "0");
+    return { day: `${HT_DAYS[d.getDay()]} ${d.getDate()} ${HT_MONTHS[d.getMonth()]}`, time: h };
+  }
+  const loc = { en: "en-US", es: "es-US", pt: "pt-BR" }[lang];
+  return { day: d.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" }), time: hm };
+}
+const RM = {
+  en: (v) => `Hi ${v.name}, this is ${v.adv} from Eastside Worker Center. Reminder: your appointment is ${v.day} at ${v.time}, at ${v.place}. If you can’t come, reply to this message and we will find another time.`,
+  es: (v) => `Hola ${v.name}, le escribe ${v.adv} del Eastside Worker Center. Le recordamos su cita el ${v.day} a las ${v.time}, en ${v.place}. Si no puede venir, responda a este mensaje y buscaremos otra hora.`,
+  ht: (v) => `Bonjou ${v.name}, se ${v.adv} nan Eastside Worker Center. Nou vle raple w randevou w la ${v.day} a ${v.time}, nan ${v.place}. Si w pa ka vini, reponn mesaj sa a epi n ap chèche yon lòt lè.`,
+  pt: (v) => `Olá ${v.name}, aqui é ${v.adv} do Eastside Worker Center. Lembrete: sua consulta é ${v.day} às ${v.time}, em ${v.place}. Se não puder vir, responda esta mensagem e vamos marcar outro horário.`,
+};
+(function defaultWhen() {
+  const d = new Date(); d.setDate(d.getDate() + ((2 - d.getDay() + 7) % 7 || 7)); d.setHours(10, 0, 0, 0);
+  const p = (n) => String(n).padStart(2, "0");
+  $("rm-when").value = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T10:00`;
+})();
+function renderReminder() {
+  const lang = $("rm-lang").value;
+  const d = new Date($("rm-when").value);
+  const w = isNaN(d) ? { day: "[date]", time: "[time]" } : fmtWhen(d, lang);
+  let msg = RM[lang]({ name: $("rm-name").value.trim() || "[name]", adv: $("rm-adv").value.trim() || "[advocate]", place: $("rm-place").value.trim() || "[place]", ...w });
+  if ($("rm-bring").checked) msg += "\n\n" + checklistText(lang);
+  $("rm-out").textContent = msg;
+  const digits = $("rm-phone").value.replace(/\D/g, "");
+  $("rm-num").textContent = $("rm-phone").value.trim() || "—";
+  $("rm-wa").href = `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+  $("rm-wa").toggleAttribute("aria-disabled", !digits);
+}
+["rm-name", "rm-phone", "rm-lang", "rm-when", "rm-adv", "rm-place", "rm-bring"].forEach(id => $(id).addEventListener("input", renderReminder));
+$("rm-copy").onclick = (e) => copy($("rm-out").textContent, e.target);
+renderReminder();
+
+/* ---------- 8. Flyer ---------- */
+let flCtl = null;
+function flPill() {
+  const ok = $("fl-ok").checked && $("fl-reviewer").value.trim();
+  $("fl-pill").className = "pill " + (ok ? "done" : "draft");
+  $("fl-pill").textContent = ok ? `Reviewed by ${$("fl-reviewer").value.trim()}` : "Draft · not reviewed";
+}
+$("fl-ok").onchange = flPill; $("fl-reviewer").oninput = flPill;
+$("fl-go").onclick = async () => {
+  if (!sample) return;
+  const src = $("fl-src").value.trim();
+  if (!src) { $("fl-status").textContent = "Paste the flyer text first."; return; }
+  const lang = LANG_EN[$("fl-lang").value];
+  const out = $("fl-out"); out.classList.remove("empty"); out.textContent = "Thinking…";
+  $("fl-ok").checked = false; flPill();
+  $("fl-go").disabled = true; $("fl-stop").hidden = false; $("fl-status").textContent = "";
+  flCtl = new AbortController();
+  try {
+    const r = await sample(`Task: Translate this worker center know-your-rights flyer from English into ${lang} for workers who may have limited formal schooling.
+- Keep the meaning exact. Do not add, soften or strengthen any legal claim.
+- Use everyday words. Keep line breaks and headings. Plain text only, no markdown.
+- Keep names, phone numbers, addresses and the organization name unchanged.
+- For legal terms like "minimum wage" or "overtime", give the ${lang} term and the English term in parentheses the first time.
+After the translation, write a line "---", then in English: "Check these phrases:" and list any phrases where you were unsure of the wording or where several translations are possible, with the reason.
+
+Flyer:
+"""
+${src.slice(0, 20000)}
+"""`, { signal: flCtl.signal, modelTier: "complex", onText: ({ text }) => { out.textContent = text; } });
+    $("fl-status").textContent = r.truncated ? "Cut short. Translate the flyer in two parts." : "Draft ready. Send it to a fluent reviewer.";
+  } catch (e) {
+    out.textContent = e.text || ""; if (!e.text) out.classList.add("empty");
+    $("fl-status").textContent = aiError(e);
+  } finally { $("fl-go").disabled = !sample; $("fl-stop").hidden = true; }
+};
+$("fl-stop").onclick = () => flCtl && flCtl.abort();
+})();
+</script>
