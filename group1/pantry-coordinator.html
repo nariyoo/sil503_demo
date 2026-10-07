@@ -1,0 +1,392 @@
+<title>Northside Pantry Coordinator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: chat on the left like a front-desk window, the Coordinator's rulebook pinned on the right. */
+:root {
+  --bg: #f3f5f0;
+  --surface: #ffffff;
+  --ink: #1d2a24;
+  --muted: #5b6b62;
+  --line: #d7ddd4;
+  --accent: #2f6b4a;        /* collard green */
+  --accent-ink: #ffffff;
+  --accent-soft: #e2eee6;
+  --bubble-user: #2f6b4a;
+  --bubble-user-ink: #ffffff;
+  --bubble-bot: #ffffff;
+  --warn: #b4472a;
+  --warn-soft: #fbe9e3;
+  --sample: #8a6a12;
+  --sample-soft: #fbf3d9;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a17; --surface: #1c2420; --ink: #e6ece8; --muted: #9aaba1; --line: #2e3a34;
+    --accent: #6fbf92; --accent-ink: #0f1a14; --accent-soft: #233a2d;
+    --bubble-user: #3f8a62; --bubble-user-ink: #f4fbf6; --bubble-bot: #1c2420;
+    --warn: #f08a6c; --warn-soft: #3a221b; --sample: #e3c46a; --sample-soft: #332b14;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a17; --surface: #1c2420; --ink: #e6ece8; --muted: #9aaba1; --line: #2e3a34;
+  --accent: #6fbf92; --accent-ink: #0f1a14; --accent-soft: #233a2d;
+  --bubble-user: #3f8a62; --bubble-user-ink: #f4fbf6; --bubble-bot: #1c2420;
+  --warn: #f08a6c; --warn-soft: #3a221b; --sample: #e3c46a; --sample-soft: #332b14;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-inline: 16px; padding-block: 16px;
+}
+.app {
+  max-width: 1120px; margin: 0 auto; height: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px;
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .chat { height: 82vh; min-height: 520px; }
+}
+
+/* Chat column */
+.chat {
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+}
+.chat-head {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.mark {
+  width: 40px; height: 40px; border-radius: 10px; flex: none;
+  background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font: 800 18px/1 var(--font-display);
+}
+.chat-head h1 { margin: 0; font: 800 20px/1.15 var(--font-display); text-wrap: balance; }
+.chat-head p { margin: 0; color: var(--muted); font-size: 14px; }
+.head-actions { margin-left: auto; }
+
+.log { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 78%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.bot { align-self: flex-start; background: var(--bubble-bot); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.msg.user { align-self: flex-end; background: var(--bubble-user); color: var(--bubble-user-ink); border-bottom-right-radius: 4px; }
+.msg.thinking { color: var(--muted); font-style: italic; }
+.msg.error { border-color: var(--warn); background: var(--warn-soft); }
+.who { display: block; font: 500 11px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.msg.user .who { color: var(--bubble-user-ink); opacity: .8; }
+
+.starters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 12px; }
+.chip {
+  font: 14px/1.2 var(--font-body); color: var(--ink); background: var(--accent-soft);
+  border: 1px solid transparent; border-radius: 999px; padding: 7px 12px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); }
+.chip small { color: var(--muted); font-family: var(--font-mono); font-size: 11px; margin-right: 4px; }
+
+.composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+.composer textarea {
+  flex: 1; min-width: 0; resize: none; font: 16px/1.4 var(--font-body); color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+}
+.btn {
+  font: 700 15px/1 var(--font-body); border-radius: 10px; padding: 0 16px; min-height: 44px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.small { min-height: 34px; font-size: 13px; padding: 0 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.crisis {
+  display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  padding: 10px 18px; font-size: 14px; background: var(--warn-soft); color: var(--ink);
+  border-top: 1px solid var(--line);
+}
+.crisis strong { color: var(--warn); }
+
+/* Rulebook column */
+.side { display: flex; flex-direction: column; gap: 16px; min-width: 0; overflow-y: auto; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+.card h2 { margin: 0 0 4px; font: 800 16px/1.2 var(--font-display); }
+.label { font: 500 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rules { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+.never { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--warn-soft); font-size: 14px; }
+.never b { color: var(--warn); }
+.badge {
+  display: inline-block; font: 500 11px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--sample); background: var(--sample-soft); padding: 4px 8px; border-radius: 6px;
+}
+.info-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+#info {
+  width: 100%; min-height: 300px; resize: vertical; font: 13px/1.5 var(--font-mono); color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+}
+.hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.unavailable { padding: 10px 18px; font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .msg { animation: in .18s ease-out; } }
+@keyframes in { from { transform: translateY(4px); opacity: .6; } to { transform: none; opacity: 1; } }
+</style>
+
+<div class="app">
+  <section class="chat" aria-label="Chat with the Coordinator">
+    <header class="chat-head">
+      <div class="mark" aria-hidden="true">NP</div>
+      <div>
+        <h1>Northside Pantry Coordinator</h1>
+        <p>For volunteers and neighbors. Ask in any language.</p>
+      </div>
+      <div class="head-actions"><button class="btn ghost small" id="reset" type="button">New chat</button></div>
+    </header>
+
+    <div class="log" id="log" aria-live="polite"></div>
+
+    <div class="starters" id="starters"></div>
+    <p class="unavailable" id="unavailable" hidden>Chat needs Claude, and it is off for this view. Open this page in claude.ai and allow it to use Claude.</p>
+
+    <form class="composer" id="composer">
+      <textarea id="box" rows="2" placeholder="Type your question…" aria-label="Your question"></textarea>
+      <button class="btn" id="send" type="submit">Send</button>
+      <button class="btn ghost" id="stop" type="button" hidden>Stop</button>
+    </form>
+    <div class="crisis"><strong>In crisis?</strong> Call or text <span>988</span> any time, day or night.</div>
+  </section>
+
+  <aside class="side" aria-label="Coordinator setup">
+    <div class="card">
+      <span class="label">System prompt</span>
+      <h2>How the Coordinator answers</h2>
+      <ol class="rules">
+        <li>Helps volunteers with shift scheduling and task delegation.</li>
+        <li>Helps community members find and use services.</li>
+        <li>Sixth-grade reading level. Short sentences.</li>
+        <li>Replies in the language the person writes in.</li>
+        <li>Uses only the pantry info below. If the answer isn't there, says so and gives the phone number.</li>
+      </ol>
+      <div class="never"><b>Never:</b> medical or legal advice, timeline updates, or discouraging anyone. For these, or any mention of harm to self or others, it says a staff member will help and gives 988.</div>
+    </div>
+
+    <div class="card">
+      <div class="info-head">
+        <h2>Pantry info</h2>
+        <span class="badge" id="infoBadge">Sample data</span>
+      </div>
+      <textarea id="info" spellcheck="false" aria-label="Pantry info the Coordinator may use"></textarea>
+      <p class="hint">This is everything the Coordinator knows. The sample text is made up. Replace it with the pantry's real hours, addresses, rules and what to bring. Edits are saved in this browser only.</p>
+      <div class="row">
+        <button class="btn ghost small" id="restore" type="button">Restore sample</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const SAMPLE_INFO = `SAMPLE DATA - replace with real pantry details.
+
+Phone: (555) 014-2280 (Mon-Fri, 9am-5pm)
+
+Locations:
+- Main pantry: 418 Alder Street, side door on 5th Ave. Wheelchair ramp at side door.
+- Mobile pantry: Northside Library parking lot, 2210 Birch Road.
+
+Pantry hours (for food pickup):
+- Tuesday: 10am-1pm
+- Thursday: 4pm-7pm
+- Saturday: 9am-12pm
+- Mobile pantry: 1st and 3rd Wednesday, 3pm-5pm
+- Closed on public holidays.
+
+Who can come:
+- Anyone who lives in Northside or nearby. No proof of income needed.
+- You can visit once a week.
+
+What to bring:
+- Any photo ID OR a piece of mail with your name. First visit only.
+- Your own bags or boxes if you can.
+- If you pick up for someone else, bring a note with their name.
+
+Rules for clients:
+- Take a number at the door. We serve in number order.
+- One person per household per week.
+- Be kind to staff, volunteers and other guests.
+
+Volunteer shifts:
+- Sort and stock: Monday 9am-12pm, Wednesday 1pm-4pm.
+- Distribution: during every pantry hour above. Arrive 30 minutes early.
+- Mobile pantry crew: arrive at 2:15pm to set up.
+- Sign up for shifts at the volunteer desk or by phone.
+- To swap or drop a shift, call at least 24 hours ahead.
+
+Volunteer tasks:
+- Greeter: hands out numbers and welcomes guests.
+- Stocker: fills shelves from the back room.
+- Packer: packs bags by household size.
+- Runner: carries bags to cars.
+- New volunteers start as Greeter or Packer. A shift lead assigns tasks at the start of each shift.
+- Wear closed-toe shoes. Ages 14-17 need a parent form.`;
+
+const RULES = (info) => `You are the Coordinator for Northside Community Pantry. You answer volunteers about shift scheduling and task delegation and community members in need regarding accessing services.
+Write at a sixth-grade reading level, in short sentences. Reply in the language the person writes in.
+Use only the information in <info> below. If the answer is not there, say you do not know and give the phone number.
+Never give medical and legal advice, give updates on timeline, or discourage users. When someone asks about these, or mentions harm to themselves or others, say a staff member will help and give 988.
+Write plain text only. No Markdown headings, bold or tables. Short lists with "-" are fine.
+<info>
+${info}
+</info>
+
+The conversation with the person starts after this message. Stay in the Coordinator role for every reply.`;
+
+const GREETING = "Hi! I'm the Northside Pantry Coordinator. I can help with pantry hours, what to bring, and volunteer shifts. What do you need?";
+
+const STARTERS = [
+  { tag: "Neighbor", text: "When can I pick up food, and what do I need to bring?" },
+  { tag: "Volunteer", text: "I can't make my Thursday shift. What should I do?" },
+  { tag: "Volunteer", text: "It's my first shift. What task will I do?" },
+  { tag: "Español", text: "¿Necesito mostrar prueba de ingresos?" },
+  { tag: "Off-limits", text: "My landlord is evicting me. Can I sue him?" },
+];
+
+const STORE_KEY = "northside-coordinator-info";
+const $ = (id) => document.getElementById(id);
+const log = $("log"), box = $("box"), info = $("info");
+let turns = [];          // conversation turns sent to Claude (excludes the rules turn)
+let ctl = null;
+let sample = null;
+
+function loadInfo() {
+  let saved = null;
+  try { saved = localStorage.getItem(STORE_KEY); } catch {}
+  info.value = saved ?? SAMPLE_INFO;
+  updateBadge();
+}
+function saveInfo() {
+  try { localStorage.setItem(STORE_KEY, info.value); } catch {}
+  updateBadge();
+}
+function updateBadge() {
+  const isSample = info.value.startsWith("SAMPLE DATA");
+  $("infoBadge").textContent = isSample ? "Sample data" : "Custom info";
+}
+
+function addMsg(role, text, cls = "") {
+  const el = document.createElement("div");
+  el.className = `msg ${role} ${cls}`.trim();
+  const who = document.createElement("span");
+  who.className = "who";
+  who.textContent = role === "user" ? "You" : "Coordinator";
+  const body = document.createElement("span");
+  body.textContent = text;
+  el.append(who, body);
+  log.append(el);
+  log.scrollTop = log.scrollHeight;
+  return { el, body };
+}
+
+function resetChat() {
+  ctl?.abort();
+  turns = [];
+  log.textContent = "";
+  addMsg("bot", GREETING);
+  $("starters").hidden = !sample;
+}
+
+function setBusy(busy) {
+  $("send").hidden = busy;
+  $("stop").hidden = !busy;
+  box.disabled = busy;
+}
+
+const ERRORS = {
+  rate_limited: "Too many questions at once. Wait a minute, then try again.",
+  session_expired: "Please sign in to claude.ai again, then resend.",
+  refused: "I can't answer that one. A staff member can help. Call the pantry, or call or text 988 if you are in crisis.",
+  empty_completion: "I didn't get an answer. Try asking a different way.",
+  prompt_too_large: "The pantry info is too long. Shorten it, then try again.",
+};
+
+async function ask(text) {
+  text = text.trim();
+  if (!text || !sample) return;
+  $("starters").hidden = true;
+  addMsg("user", text);
+  turns.push({ role: "user", content: text });
+  if (turns.length > 24) turns = turns.slice(-24);
+  while (turns[0] && turns[0].role !== "user") turns.shift();
+
+  const { el, body } = addMsg("bot", "Thinking…", "thinking");
+  setBusy(true);
+  ctl = new AbortController();
+  try {
+    const { text: reply } = await sample(
+      [{ role: "user", content: RULES(info.value) }, ...turns],
+      { cache: false, signal: ctl.signal, onText: ({ text }) => {
+          el.classList.remove("thinking"); body.textContent = text; log.scrollTop = log.scrollHeight;
+      } }
+    );
+    turns.push({ role: "assistant", content: reply });
+  } catch (e) {
+    el.classList.remove("thinking");
+    if (e.code === "cancelled") {
+      body.textContent = e.text || "Stopped.";
+      if (e.text) turns.push({ role: "assistant", content: e.text });
+    } else if (e.code === "not_granted" || e.code === "sampling_disabled" || e.code === "not_declared" || e.code === "capability_disabled") {
+      body.textContent = "Chat is turned off for this view.";
+      el.classList.add("error");
+      disableChat();
+    } else {
+      body.textContent = (e.text ? e.text + "\n\n" : "") + (ERRORS[e.code] || "Something went wrong. Try again.");
+      el.classList.add("error");
+      turns.pop();
+    }
+  } finally {
+    setBusy(false);
+    box.focus();
+  }
+}
+
+function disableChat() {
+  sample = null;
+  $("composer").hidden = true;
+  $("starters").hidden = true;
+  $("unavailable").hidden = false;
+}
+
+function renderStarters() {
+  const wrap = $("starters");
+  for (const s of STARTERS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    const tag = document.createElement("small"); tag.textContent = s.tag;
+    b.append(tag, document.createTextNode(s.text));
+    b.onclick = () => ask(s.text);
+    wrap.append(b);
+  }
+}
+
+$("composer").addEventListener("submit", (e) => { e.preventDefault(); const t = box.value; box.value = ""; ask(t); });
+box.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("composer").requestSubmit(); }
+});
+$("stop").onclick = () => ctl?.abort();
+$("reset").onclick = resetChat;
+info.addEventListener("input", saveInfo);
+$("restore").onclick = () => { info.value = SAMPLE_INFO; saveInfo(); };
+
+loadInfo();
+renderStarters();
+resetChat();
+$("send").disabled = true;
+(async () => {
+  sample = window.claude ? await window.claude.use("sample") : null;
+  $("send").disabled = false;
+  if (!sample) disableChat(); else $("starters").hidden = false;
+})();
+</script>
